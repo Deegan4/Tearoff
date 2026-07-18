@@ -32,6 +32,22 @@ npm run web
 > Native builds (`run:ios` / `run:android`) require the corresponding native
 > toolchains. The web target runs anywhere.
 
+### Running in a headless environment (no device/emulator)
+
+In a container or CI box there is no device to run Expo Go and no
+accelerated emulator, so the **web** target is the runnable path:
+
+```bash
+scripts/run-web.sh            # starts Expo web on :8081 and waits for it to serve
+scripts/run-web.sh 19006      # custom port
+```
+
+Then drive it with a headless browser (e.g. Playwright/Chromium) against
+`http://localhost:8081`. All app logic — editing, persistence
+(`AsyncStorage` maps to `localStorage` on web), totals, and the print/PDF
+HTML — exercises on web. Printing opens the browser print dialog rather than
+a native print sheet.
+
 ## Project structure
 
 ```
