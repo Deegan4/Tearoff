@@ -47,9 +47,26 @@ src/
 Amounts are stored in the smallest currency unit (cents) to avoid
 floating-point rounding errors and formatted with `Intl.NumberFormat`.
 
+## Printing
+
+Printing is handled by [`expo-print`](https://docs.expo.dev/versions/latest/sdk/print/):
+
+- **Print receipt** renders the receipt to HTML (`src/utils/receiptHtml.ts`,
+  sized for an 80mm thermal roll) and opens the native print sheet via
+  `Print.printAsync`. On iOS this is AirPrint; on Android the system print
+  dialog; on web the browser print dialog.
+- **Save PDF** uses `Print.printToFileAsync` to render the same HTML to a
+  PDF, then shares it through `expo-sharing` (or opens it in a new tab on
+  web).
+
+Both actions live in `src/utils/print.ts`.
+
+> Note: `expo-print` requires a development build or the platform's native
+> print support — it is not available in a bare web-only Expo Go preview of
+> native modules, but works on device/simulator and on web.
+
 ## Extending
 
-The `handlePrint` callback in `App.tsx` currently simulates dispatching the
-receipt. Replace it with a real integration (for example an ESC/POS
-Bluetooth printer module, or `expo-print` for PDF/AirPrint) to print for
-real.
+To drive a specific hardware printer directly (for example an ESC/POS
+Bluetooth thermal printer), add the relevant module and call it from
+`src/utils/print.ts` alongside the `expo-print` path.

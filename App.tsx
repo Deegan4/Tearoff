@@ -15,31 +15,47 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Receipt } from './src/components/Receipt';
 import { sampleReceipt } from './src/data';
-import { formatMoney, total } from './src/utils/format';
+import { printReceipt, shareReceiptPdf } from './src/utils/print';
+
+function reportError(action: string, error: unknown) {
+  const message = error instanceof Error ? error.message : String(error);
+  if (Platform.OS === 'web') {
+    window.alert(`${action} failed: ${message}`);
+  } else {
+    Alert.alert(`${action} failed`, message);
+  }
+}
 
 export default function App() {
-  const [printing, setPrinting] = useState(false);
+  const [busy, setBusy] = useState<null | 'print' | 'pdf'>(null);
 
-  const handlePrint = useCallback(() => {
-    if (printing) {
+  const handlePrint = useCallback(async () => {
+    if (busy) {
       return;
     }
-    setPrinting(true);
+    setBusy('print');
+    try {
+      await printReceipt(sampleReceipt);
+    } catch (error) {
+      reportError('Print', error);
+    } finally {
+      setBusy(null);
+    }
+  }, [busy]);
 
-    // Simulate dispatching the receipt to a printer. Wiring up a real
-    // printer (e.g. via a Bluetooth/ESC-POS module) can replace this.
-    setTimeout(() => {
-      setPrinting(false);
-      const amount = formatMoney(total(sampleReceipt), sampleReceipt.currency);
-      const message = `Receipt #${sampleReceipt.id} (${amount}) sent to printer.`;
-      if (Platform.OS === 'web') {
-        // Alert.alert is a no-op on web; fall back to the DOM dialog.
-        window.alert(message);
-      } else {
-        Alert.alert('Printed', message);
-      }
-    }, 700);
-  }, [printing]);
+  const handleSavePdf = useCallback(async () => {
+    if (busy) {
+      return;
+    }
+    setBusy('pdf');
+    try {
+      await shareReceiptPdf(sampleReceipt);
+    } catch (error) {
+      reportError('Export', error);
+    } finally {
+      setBusy(null);
+    }
+  }, [busy]);
 
   return (
     <GestureHandlerRootView style={styles.root}>
@@ -58,10 +74,23 @@ export default function App() {
         </ScrollView>
 
         <View style={styles.footer}>
-          <PressableScale style={styles.printButton} onPress={handlePrint}>
+          <PressableScale
+            style={[styles.button, styles.secondaryButton]}
+            onPress={handleSavePdf}
+          >
+            <Ionicons name="document-text-outline" size={20} color="#f5f5f5" />
+            <Text style={styles.secondaryButtonText}>
+              {busy === 'pdf' ? 'Exporting…' : 'Save PDF'}
+            </Text>
+          </PressableScale>
+
+          <PressableScale
+            style={[styles.button, styles.primaryButton]}
+            onPress={handlePrint}
+          >
             <Ionicons name="print-outline" size={22} color="#111" />
-            <Text style={styles.printButtonText}>
-              {printing ? 'Printing…' : 'Print receipt'}
+            <Text style={styles.primaryButtonText}>
+              {busy === 'print' ? 'Printing…' : 'Print receipt'}
             </Text>
           </PressableScale>
         </View>
@@ -95,21 +124,35 @@ const styles = StyleSheet.create({
     paddingBottom: 40,
   },
   footer: {
+    flexDirection: 'row',
+    gap: 12,
     padding: 20,
     borderTopWidth: StyleSheet.hairlineWidth,
     borderTopColor: '#2a2a2a',
   },
-  printButton: {
+  button: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#f5f5f5',
     paddingVertical: 16,
     borderRadius: 14,
   },
-  printButtonText: {
+  primaryButton: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  secondaryButton: {
+    flex: 1,
+    backgroundColor: '#2a2a2a',
+  },
+  primaryButtonText: {
     color: '#111',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  secondaryButtonText: {
+    color: '#f5f5f5',
     fontSize: 16,
     fontWeight: '600',
   },
