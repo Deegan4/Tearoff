@@ -1,4 +1,4 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useReducer, useRef, useState } from 'react';
 import {
   Alert,
   Platform,
@@ -14,8 +14,11 @@ import { PressableScale } from 'pressto';
 import { Ionicons } from '@expo/vector-icons';
 
 import { Receipt } from './src/components/Receipt';
+import { ItemEditor } from './src/components/ItemEditor';
 import { sampleReceipt } from './src/data';
+import { receiptReducer } from './src/state/receiptReducer';
 import { printReceipt, shareReceiptPdf } from './src/utils/print';
+import { loadReceipt, saveReceipt } from './src/utils/storage';
 
 function reportError(action: string, error: unknown) {
   const message = error instanceof Error ? error.message : String(error);
@@ -27,73 +30,117 @@ function reportError(action: string, error: unknown) {
 }
 
 export default function App() {
+  const [receipt, dispatch] = useReducer(receiptReducer, sampleReceipt);
+  const [editing, setEditing] = useState(false);
   const [busy, setBusy] = useState<null | 'print' | 'pdf'>(null);
+  const hydratedRef = useRef(false);
 
-  const handlePrint = useCallback(async () => {
-    if (busy) {
-      return;
-    }
-    setBusy('print');
-    try {
-      await printReceipt(sampleReceipt);
-    } catch (error) {
-      reportError('Print', error);
-    } finally {
-      setBusy(null);
-    }
-  }, [busy]);
+  // Load any persisted receipt on first mount.
+  useEffect(() => {
+    let active = true;
+    loadReceipt().then((saved) => {
+      if (active && saved) {
+        dispatch({ type: 'reset', receipt: saved });
+      }
+      if (active) {
+        hydratedRef.current = true;
+      }
+    });
+    return () => {
+      active = false;
+    };
+  }, []);
 
-  const handleSavePdf = useCallback(async () => {
-    if (busy) {
-      return;
+  // Persist on every change, but only after the initial load so we don't
+  // clobber stored data with the default before it has been read.
+  useEffect(() => {
+    if (hydratedRef.current) {
+      saveReceipt(receipt);
     }
-    setBusy('pdf');
-    try {
-      await shareReceiptPdf(sampleReceipt);
-    } catch (error) {
-      reportError('Export', error);
-    } finally {
-      setBusy(null);
-    }
-  }, [busy]);
+  }, [receipt]);
+
+  const runOutput = useCallback(
+    async (kind: 'print' | 'pdf') => {
+      if (busy) {
+        return;
+      }
+      setBusy(kind);
+      try {
+        if (kind === 'print') {
+          await printReceipt(receipt);
+        } else {
+          await shareReceiptPdf(receipt);
+        }
+      } catch (error) {
+        reportError(kind === 'print' ? 'Print' : 'Export', error);
+      } finally {
+        setBusy(null);
+      }
+    },
+    [busy, receipt],
+  );
 
   return (
     <GestureHandlerRootView style={styles.root}>
       <SafeAreaView style={styles.root}>
         <StatusBar style="light" />
         <View style={styles.header}>
-          <Text style={styles.title}>iPrint</Text>
-          <Text style={styles.subtitle}>Receipt preview</Text>
+          <View>
+            <Text style={styles.title}>iPrint</Text>
+            <Text style={styles.subtitle}>
+              {editing ? 'Edit items' : 'Receipt preview'}
+            </Text>
+          </View>
+          <PressableScale
+            style={styles.editToggle}
+            onPress={() => setEditing((v) => !v)}
+          >
+            <Ionicons
+              name={editing ? 'checkmark' : 'create-outline'}
+              size={18}
+              color="#111"
+            />
+            <Text style={styles.editToggleText}>
+              {editing ? 'Done' : 'Edit'}
+            </Text>
+          </PressableScale>
         </View>
 
         <ScrollView
           contentContainerStyle={styles.scrollContent}
           showsVerticalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
         >
-          <Receipt receipt={sampleReceipt} />
+          {editing ? (
+            <ItemEditor receipt={receipt} dispatch={dispatch} />
+          ) : (
+            <Receipt receipt={receipt} />
+          )}
         </ScrollView>
 
-        <View style={styles.footer}>
-          <PressableScale
-            style={[styles.button, styles.secondaryButton]}
-            onPress={handleSavePdf}
-          >
-            <Ionicons name="document-text-outline" size={20} color="#f5f5f5" />
-            <Text style={styles.secondaryButtonText}>
-              {busy === 'pdf' ? 'Exporting…' : 'Save PDF'}
-            </Text>
-          </PressableScale>
+        {!editing && (
+          <View style={styles.footer}>
+            <PressableScale
+              style={[styles.button, styles.secondaryButton]}
+              onPress={() => runOutput('pdf')}
+            >
+              <Ionicons name="document-text-outline" size={20} color="#f5f5f5" />
+              <Text style={styles.secondaryButtonText}>
+                {busy === 'pdf' ? 'Exporting…' : 'Save PDF'}
+              </Text>
+            </PressableScale>
 
-          <PressableScale
-            style={[styles.button, styles.primaryButton]}
-            onPress={handlePrint}
-          >
-            <Ionicons name="print-outline" size={22} color="#111" />
-            <Text style={styles.primaryButtonText}>
-              {busy === 'print' ? 'Printing…' : 'Print receipt'}
-            </Text>
-          </PressableScale>
-        </View>
+            <PressableScale
+              style={[styles.button, styles.primaryButton]}
+              onPress={() => runOutput('print')}
+            >
+              <Ionicons name="print-outline" size={22} color="#111" />
+              <Text style={styles.primaryButtonText}>
+                {busy === 'print' ? 'Printing…' : 'Print receipt'}
+              </Text>
+            </PressableScale>
+          </View>
+        )}
       </SafeAreaView>
     </GestureHandlerRootView>
   );
@@ -105,6 +152,9 @@ const styles = StyleSheet.create({
     backgroundColor: '#111111',
   },
   header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     paddingHorizontal: 20,
     paddingTop: 12,
     paddingBottom: 8,
@@ -118,6 +168,20 @@ const styles = StyleSheet.create({
     color: '#9a9a9a',
     fontSize: 14,
     marginTop: 2,
+  },
+  editToggle: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#f5f5f5',
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  editToggleText: {
+    color: '#111',
+    fontSize: 14,
+    fontWeight: '600',
   },
   scrollContent: {
     padding: 20,

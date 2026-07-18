@@ -30,6 +30,20 @@ export function total(receipt: Receipt): number {
   return subtotal(receipt) + taxAmount(receipt);
 }
 
+/** Converts an amount in cents into a plain editable decimal string, e.g. 320 -> "3.20". */
+export function centsToInput(amountInCents: number): string {
+  return (amountInCents / 100).toFixed(2);
+}
+
+/** Parses a user-entered major-unit amount (e.g. "3.20") into cents. Returns 0 for invalid input. */
+export function inputToCents(input: string): number {
+  const value = Number(input.replace(/[^0-9.]/g, ''));
+  if (!Number.isFinite(value) || value < 0) {
+    return 0;
+  }
+  return Math.round(value * 100);
+}
+
 export function formatDate(isoString: string): string {
   const date = new Date(isoString);
   if (Number.isNaN(date.getTime())) {

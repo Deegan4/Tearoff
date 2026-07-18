@@ -29,7 +29,7 @@ The design separates **domain data**, **rendering**, and **output**:
 
 - **Printing/output** is isolated in `src/utils/print.ts`: `printReceipt` opens the native/web print dialog via `Print.printAsync`, and `shareReceiptPdf` renders a PDF with `Print.printToFileAsync` and shares it via `expo-sharing` (falls back to opening the PDF in a new tab on web). `expo-print`/`expo-sharing` behave differently per platform, so branch on `Platform.OS` for web vs. native rather than assuming a single code path.
 
-`src/data.ts` holds a hardcoded `sampleReceipt` used as the app's current data source — there is no persistence or editing yet.
+- **State & persistence**: the receipt lives in a `useReducer` in `App.tsx`. All mutations go through `src/state/receiptReducer.ts` (add/remove/update item), which normalizes input — quantity and `unitPrice` are coerced to non-negative integers (cents). `src/data.ts` is only the **seed** used on first launch; `src/utils/storage.ts` loads/saves the receipt to `AsyncStorage`. Persistence is gated on a `hydratedRef` so the default seed is not written over stored data before the initial async load completes — preserve that guard when touching the load/save effects. The `ItemEditor` lets users type prices in major units (dollars); `inputToCents`/`centsToInput` in `format.ts` bridge to the cents representation.
 
 ## Conventions
 

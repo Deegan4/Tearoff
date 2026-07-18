@@ -35,17 +35,30 @@ npm run web
 ## Project structure
 
 ```
-App.tsx                 App shell: header, receipt preview, print button
-index.ts                Entry point (registerRootComponent)
+App.tsx                    App shell: edit/preview toggle, print + PDF actions
+index.ts                   Entry point (registerRootComponent)
 src/
-  types.ts              Receipt / ReceiptItem models
-  data.ts               Sample receipt used for the preview
-  utils/format.ts       Money / date formatting and total calculations
-  components/Receipt.tsx Receipt layout
+  types.ts                 Receipt / ReceiptItem models
+  data.ts                  Default receipt (seed) used on first launch
+  state/receiptReducer.ts  Edit operations (add / remove / update item)
+  utils/format.ts          Money / date formatting, total + input calculations
+  utils/storage.ts         AsyncStorage load/save
+  utils/receiptHtml.ts     Printable HTML for expo-print
+  utils/print.ts           Print / PDF-share via expo-print + expo-sharing
+  components/Receipt.tsx    Receipt preview layout
+  components/ItemEditor.tsx Editable item list
 ```
 
 Amounts are stored in the smallest currency unit (cents) to avoid
 floating-point rounding errors and formatted with `Intl.NumberFormat`.
+
+## Editing & persistence
+
+Tap **Edit** to add, remove, or change line items (name, quantity, unit
+price); totals recompute live. Edits are dispatched through
+`src/state/receiptReducer.ts` and persisted to `AsyncStorage`
+(`src/utils/storage.ts`) on every change, so they survive app reloads. The
+receipt in `src/data.ts` is only the seed used on first launch.
 
 ## Printing
 
