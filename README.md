@@ -78,7 +78,16 @@ receipt in `src/data.ts` is only the seed used on first launch.
 
 ## Printing
 
-Printing is handled by [`expo-print`](https://docs.expo.dev/versions/latest/sdk/print/):
+Tapping **Print receipt** plays an animated thermal-printer sequence
+(`src/components/PrinterOverlay.tsx`): a printer bezel drops from the top of
+the screen and the receipt feeds out of a slot with a mechanical stepped
+motion, a blinking status LED, a scan bar, and an SVG zigzag torn edge.
+Reanimated drives the feed; the paper is the same `Receipt` component
+rendered on white stock. When the feed finishes you can **Tear off** (which
+animates the paper away and closes) or send it to a real printer.
+
+Real output is handled by
+[`expo-print`](https://docs.expo.dev/versions/latest/sdk/print/):
 
 - **Print receipt** renders the receipt to HTML (`src/utils/receiptHtml.ts`,
   sized for an 80mm thermal roll) and opens the native print sheet via

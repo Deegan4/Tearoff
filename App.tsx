@@ -15,6 +15,7 @@ import { Ionicons } from '@expo/vector-icons';
 
 import { Receipt } from './src/components/Receipt';
 import { ItemEditor } from './src/components/ItemEditor';
+import { PrinterOverlay } from './src/components/PrinterOverlay';
 import { sampleReceipt } from './src/data';
 import { receiptReducer } from './src/state/receiptReducer';
 import { printReceipt, shareReceiptPdf } from './src/utils/print';
@@ -32,6 +33,7 @@ function reportError(action: string, error: unknown) {
 export default function App() {
   const [receipt, dispatch] = useReducer(receiptReducer, sampleReceipt);
   const [editing, setEditing] = useState(false);
+  const [printing, setPrinting] = useState(false);
   const [busy, setBusy] = useState<null | 'print' | 'pdf'>(null);
   const hydratedRef = useRef(false);
 
@@ -132,15 +134,20 @@ export default function App() {
 
             <PressableScale
               style={[styles.button, styles.primaryButton]}
-              onPress={() => runOutput('print')}
+              onPress={() => setPrinting(true)}
             >
               <Ionicons name="print-outline" size={22} color="#111" />
-              <Text style={styles.primaryButtonText}>
-                {busy === 'print' ? 'Printing…' : 'Print receipt'}
-              </Text>
+              <Text style={styles.primaryButtonText}>Print receipt</Text>
             </PressableScale>
           </View>
         )}
+
+        <PrinterOverlay
+          visible={printing}
+          receipt={receipt}
+          onClose={() => setPrinting(false)}
+          onPrintForReal={() => runOutput('print')}
+        />
       </SafeAreaView>
     </GestureHandlerRootView>
   );
