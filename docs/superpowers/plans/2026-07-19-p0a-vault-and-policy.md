@@ -522,8 +522,21 @@ public struct WindowResolution: Hashable, Codable, Sendable {
         self.provenance = provenance
     }
 
+    /// Whole calendar days between today and the deadline, negative once the
+    /// deadline day has passed.
+    ///
+    /// Both operands MUST be normalized to start-of-day first. Differencing
+    /// the raw dates truncates toward zero, so a window that closed six hours
+    /// ago returns 0 rather than a negative — and consumer code that renders
+    /// `days >= 0` as "still open" then shows an expired window as open.
     public func daysRemaining(asOf now: Date, calendar: Calendar = .utcGregorian) -> Int {
-        calendar.dateComponents([.day], from: now, to: deadline).day ?? 0
+        let startOfNow = calendar.startOfDay(for: now)
+        let startOfDeadline = calendar.startOfDay(for: deadline)
+        guard let days = calendar.dateComponents([.day], from: startOfNow, to: startOfDeadline).day else {
+            assertionFailure("day difference failed for \(startOfNow) -> \(startOfDeadline)")
+            return 0
+        }
+        return days
     }
 }
 
