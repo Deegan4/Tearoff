@@ -25,9 +25,16 @@ public struct PolicyTable: Sendable {
     /// accepted: a resulting key miss is a safe failure (the resolver
     /// returns `nil` and the app asks the user), whereas failing to strip
     /// real store numbers would cause every receipt from a chain to miss
-    /// the curated table. The dangerous failure mode — two different
-    /// merchants collapsing onto the same key — does not occur here,
-    /// because stripping only ever removes trailing digits, never letters.
+    /// the curated table.
+    ///
+    /// Collision risk: Two different merchants CAN collapse onto the same
+    /// key. Example: "Motel 6" normalizes to "motel" (the " 6" is stripped),
+    /// and an unrelated merchant keyed as "Motel" also normalizes to "motel".
+    /// Such a collision is dangerous — one merchant would silently inherit the
+    /// other's return deadline. No collision exists in the currently bundled
+    /// table, but the regex cannot rule out collisions in general. Therefore,
+    /// all new retailer entries MUST be checked against existing keys for
+    /// collisions before being added to the policy table.
     public static func normalize(_ merchant: String) -> String {
         let lowered = merchant
             .lowercased()
