@@ -120,6 +120,27 @@ Every stored window records its provenance (`printed` / `table` / `user`), and
 the UI displays it: *"Return by Mar 14 — printed on your receipt."* Provenance
 is what converts a bare date into something a user will act on.
 
+### Warranty duration is a separate problem
+
+Return windows are set by the **merchant**. Warranty length is set by the
+**manufacturer**, and the merchant is usually not the manufacturer — Best Buy
+does not decide the warranty on a Sony television. The merchant-keyed policy
+table therefore cannot supply warranty duration, and a second ladder is
+required:
+
+1. **Printed on the receipt.** Some receipts state warranty terms. Extract.
+2. **Category default.** A conservative bundled table keyed by product
+   category, not merchant: consumer electronics 1 year, major appliances
+   1 year, tools 1 year. Presented explicitly as an estimate.
+3. **User entry.** The user sets or corrects it; remembered per manufacturer.
+
+Category assignment for rung 2 is a **classification** task and is a legitimate
+use of the on-device model, unlike duration recall, which is not.
+
+Warranty dates carry the same provenance marker as return windows, and estimated
+durations are labelled as estimates in the UI. The app must never present an
+inferred warranty date with the same confidence as a printed one.
+
 ### Policy table versioning
 
 Rows carry an `effectiveDate` and are **append-only**. A purchase made under a
@@ -293,3 +314,11 @@ year-old record.
 2. **Is a top-50 retailer table the right P0 size?** Possibly too few to feel
    magical, possibly too many to hand-curate before launch. Needs a coverage
    estimate against real US retail receipt frequency.
+3. **Should warranty tracking ship in P0 at all?** It needs a second ladder and
+   a category table (§4), and its data is inherently weaker than return-window
+   data. Deferring it to P1 would tighten P0 to a single well-sourced promise —
+   return windows — at the cost of the product's name.
+4. **Is P0 still too large for one implementation plan?** It currently spans
+   capture, OCR, extraction, policy resolution, notifications, iPad layout, and
+   StoreKit. A defensible split is P0a (vault, manual entry, policy ladder,
+   alerts) and P0b (camera, OCR, AI extraction, paywall).
