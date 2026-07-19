@@ -52,3 +52,62 @@ func allProvenancesExplain() {
         #expect(!p.explanation.isEmpty)
     }
 }
+
+@Test("daysRemaining is 0 when now is the deadline day, at any time")
+func daysRemainingZeroOnDeadlineDay() {
+    let r = WindowResolution(
+        purchaseDate: date(2026, 2, 12),
+        days: 30,
+        provenance: .printed,
+        calendar: utc
+    )
+    // deadline is 2026-03-14
+    let midnight = date(2026, 3, 14)
+    let evening = utc.date(byAdding: .hour, value: 18, to: midnight)!
+    #expect(r.daysRemaining(asOf: midnight, calendar: utc) == 0)
+    #expect(r.daysRemaining(asOf: evening, calendar: utc) == 0)
+}
+
+@Test("daysRemaining is 1 the day before the deadline, at any time")
+func daysRemainingOneDayBefore() {
+    let r = WindowResolution(
+        purchaseDate: date(2026, 2, 12),
+        days: 30,
+        provenance: .printed,
+        calendar: utc
+    )
+    // deadline is 2026-03-14
+    let dayBeforeMidnight = date(2026, 3, 13)
+    let dayBeforeEvening = utc.date(byAdding: .hour, value: 18, to: dayBeforeMidnight)!
+    #expect(r.daysRemaining(asOf: dayBeforeMidnight, calendar: utc) == 1)
+    #expect(r.daysRemaining(asOf: dayBeforeEvening, calendar: utc) == 1)
+}
+
+@Test("daysRemaining is -1 the day after the deadline, at any time")
+func daysRemainingOneDayAfter() {
+    let r = WindowResolution(
+        purchaseDate: date(2026, 2, 12),
+        days: 30,
+        provenance: .printed,
+        calendar: utc
+    )
+    // deadline is 2026-03-14
+    let dayAfterMidnight = date(2026, 3, 15)
+    let dayAfterMorning = utc.date(byAdding: .hour, value: 6, to: dayAfterMidnight)!
+    #expect(r.daysRemaining(asOf: dayAfterMidnight, calendar: utc) == -1)
+    #expect(r.daysRemaining(asOf: dayAfterMorning, calendar: utc) == -1)
+}
+
+@Test("daysRemaining does not depend on time-of-day of now")
+func daysRemainingIndependentOfTimeOfDay() {
+    let r = WindowResolution(
+        purchaseDate: date(2026, 2, 12),
+        days: 30,
+        provenance: .printed,
+        calendar: utc
+    )
+    // deadline is 2026-03-14; now = one day before, at 23:59
+    let dayBefore = date(2026, 3, 13)
+    let almostMidnight = utc.date(byAdding: DateComponents(hour: 23, minute: 59), to: dayBefore)!
+    #expect(r.daysRemaining(asOf: almostMidnight, calendar: utc) == 1)
+}
