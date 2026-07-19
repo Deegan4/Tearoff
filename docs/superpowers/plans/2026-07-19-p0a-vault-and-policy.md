@@ -639,10 +639,17 @@ func unknownMerchantReturnsNil() {
     #expect(table.rule(merchantKey: "nowhere", category: .tools, on: date(2026, 1, 1)) == nil)
 }
 
-@Test("Bundled policy table loads and covers at least 20 merchants")
+@Test("Bundled policy table loads and covers the shipped retailer set")
 func bundledTableLoads() throws {
     let table = try PolicyTable.bundled()
-    #expect(table.merchantCount >= 20, "P0a ships ~20 curated returnable-goods retailers")
+    // 19, not 20: the JSON below has 22 rules but only 19 unique merchants,
+    // because walmart, target and costco each carry a general rule plus an
+    // electronics exception. Tracks the shipped table deliberately — this
+    // failing means the curated data shrank, which should never happen
+    // silently. Raise it as retailers are verified and added. Never add a
+    // retailer just to satisfy this number: an unverified window is the
+    // exact defect the provenance ladder exists to prevent.
+    #expect(table.merchantCount >= 19, "P0a ships 19 curated returnable-goods retailers")
 }
 
 @Test("Bundled table resolves a known merchant")
