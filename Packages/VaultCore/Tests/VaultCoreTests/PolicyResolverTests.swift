@@ -76,9 +76,32 @@ func consumablesGetNoWindow() {
 @Test("A zero or negative printed window is rejected as bad extraction")
 func nonPositiveWindowRejected() {
     let resolver = PolicyResolver(table: table)
-    let zero = resolver.resolve(
+
+    // Printed window at zero
+    let printedZero = resolver.resolve(
         merchant: "Joe's Corner Store", category: .tools,
         purchaseDate: date(2026, 3, 1), printedWindowDays: 0, userWindowDays: nil
     )
-    #expect(zero == nil)
+    #expect(printedZero == nil, "printedWindowDays: 0 should be rejected")
+
+    // Printed window negative
+    let printedNegative = resolver.resolve(
+        merchant: "Joe's Corner Store", category: .tools,
+        purchaseDate: date(2026, 3, 1), printedWindowDays: -5, userWindowDays: nil
+    )
+    #expect(printedNegative == nil, "printedWindowDays: -5 should be rejected")
+
+    // User window at zero
+    let userZero = resolver.resolve(
+        merchant: "Joe's Corner Store", category: .tools,
+        purchaseDate: date(2026, 3, 1), printedWindowDays: nil, userWindowDays: 0
+    )
+    #expect(userZero == nil, "userWindowDays: 0 should be rejected")
+
+    // User window negative
+    let userNegative = resolver.resolve(
+        merchant: "Joe's Corner Store", category: .tools,
+        purchaseDate: date(2026, 3, 1), printedWindowDays: nil, userWindowDays: -10
+    )
+    #expect(userNegative == nil, "userWindowDays: -10 should be rejected")
 }
