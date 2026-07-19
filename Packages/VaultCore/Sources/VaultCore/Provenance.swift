@@ -15,7 +15,7 @@ public enum Provenance: String, Codable, Sendable, CaseIterable {
     public var explanation: String {
         switch self {
         case .printed: "printed on your receipt"
-        case .table: "\(Self.tableSourceName) return policy"
+        case .table: "published return policy"
         case .categoryDefault: "typical for this category — estimate"
         case .user: "you set this"
         }
@@ -24,6 +24,4 @@ public enum Provenance: String, Codable, Sendable, CaseIterable {
     public var isEstimate: Bool {
         self == .categoryDefault
     }
-
-    static let tableSourceName = "published"
 }
