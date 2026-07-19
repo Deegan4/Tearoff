@@ -120,6 +120,25 @@ Every stored window records its provenance (`printed` / `table` / `user`), and
 the UI displays it: *"Return by Mar 14 — printed on your receipt."* Provenance
 is what converts a bare date into something a user will act on.
 
+### The returnable/consumable gate
+
+Not every receipt deserves a window. US households make roughly 146 grocery
+trips a year, and essentially none of those purchases are returnable in any
+meaningful sense. If every scanned receipt produces a tracked window, the vault
+fills with noise and stops being trustworthy.
+
+Before any window is assigned, each purchase is classified:
+
+- **Returnable / warrantable** — electronics, appliances, tools, furniture,
+  apparel, sporting goods. Gets a window.
+- **Consumable** — groceries, fuel, restaurants, most pharmacy. Stored if the
+  user wants a record, but no window, no alert, and visually de-emphasized.
+
+Classification is a categorization task and is an appropriate use of the
+on-device model. The user can always override.
+
+This gate is what keeps the vault a vault rather than a junk drawer.
+
 ### Warranty duration is a separate problem
 
 Return windows are set by the **merchant**. Warranty length is set by the
@@ -283,11 +302,54 @@ year-old record.
 
 ---
 
+## 8a. Measurement
+
+### North-star metric: extraction-correction rate
+
+Defined as *fields the user edits on the confirmation screen ÷ fields
+presented*. This is the only honest measure of whether the AI path beats manual
+entry, and per-field breakdown tells you exactly where `@Guide` tuning pays off.
+
+Recorded fields: `merchant`, `purchaseDate`, `totalCents`, `itemCount`,
+`policyResolution`, `category`.
+
+**Counts only — never field contents.** Storing "the user corrected the
+merchant" is a diagnostic; storing "the user corrected it to Planned
+Parenthood" is the surveillance this product exists to avoid.
+
+### The honest cost of having no backend
+
+With no server and no account, **this data cannot be collected from users.**
+That is a real, accepted cost of the privacy stance, not an oversight. The
+mitigation ladder:
+
+1. **Development and TestFlight** — a local diagnostics screen showing
+   correction rates, plus manual export. Sufficient to tune extraction against
+   real receipts during beta.
+2. **Post-launch** — opt-in aggregate submission (counts only, no content, no
+   identifier), off by default, with a plain-language explanation. If adoption
+   is too low to be meaningful, accept flying blind rather than weaken the
+   guarantee.
+
+The guarantee is the product. Measurement yields to it, not the reverse.
+
+### Market context (2026-07-19)
+
+US consumers returned **$849.9B in 2025, 15.8% of retail sales**; e-commerce
+return rate was 19.3% (NRF / Happy Returns, surveying 2,006 consumers and 358
+e-commerce professionals). The behavior is enormous and mainstream.
+
+Countervailing figure: households make ~146 grocery trips a year but only an
+estimated 15–30 *durable-goods* purchases. The addressable receipt population is
+small and infrequent. This is the central retention risk and the reason the
+product must deliver value passively through notifications rather than by
+requiring engagement.
+
 ## 9. Phasing
 
 | Phase | Scope |
 |---|---|
-| **P0** | Capture → OCR → extraction → confirm → vault. Policy ladder with top-50 US retailers. Return and warranty notifications. iPad split view. StoreKit tiers. |
+| **P0** | Capture → OCR → extraction → confirm → vault. Returnable/consumable gate. Policy ladder with ~20 curated returnable-goods retailers. Return and warranty notifications. iPad split view. StoreKit tiers. |
 | **P1** | `AppEntity`, intents, App Shortcuts, Spotlight indexing. |
 | **P2** | QR codec ingestion, merchant issuance, export, Wallet if signing resolves. |
 
@@ -311,9 +373,12 @@ year-old record.
 1. **Should the Siri surface move from P1 into P0?** `AppEntity` is inexpensive
    once the model exists and it is the demo. Against: an empty vault makes every
    Siri query answer "nothing found."
-2. **Is a top-50 retailer table the right P0 size?** Possibly too few to feel
-   magical, possibly too many to hand-curate before launch. Needs a coverage
-   estimate against real US retail receipt frequency.
+2. ~~**Is a top-50 retailer table the right P0 size?**~~ **Resolved
+   2026-07-19.** Ranking by revenue is the wrong axis — the NRF Top 100 is
+   dense with grocery, pharmacy, and fuel, which are near-irrelevant to
+   returns. P0 ships **~20 hand-curated returnable-goods retailers** instead,
+   which likely covers more real return windows than 50 chosen by revenue.
+   Scope reduced accordingly. Revisit once real correction-rate data exists.
 3. **Should warranty tracking ship in P0 at all?** It needs a second ladder and
    a category table (§4), and its data is inherently weaker than return-window
    data. Deferring it to P1 would tighten P0 to a single well-sourced promise —
