@@ -9,9 +9,28 @@ private func date(_ y: Int, _ m: Int, _ d: Int) -> Date {
 @Test("Merchant keys normalize case, punctuation and whitespace")
 func normalizationCollapsesVariants() {
     #expect(PolicyTable.normalize("Best Buy") == "bestbuy")
-    #expect(PolicyTable.normalize("BEST BUY #1234") == "bestbuy1234")
+    #expect(PolicyTable.normalize("BEST BUY #1234") == "bestbuy")
     #expect(PolicyTable.normalize("  target  ") == "target")
     #expect(PolicyTable.normalize("Lowe's") == "lowes")
+}
+
+@Test("A store-numbered receipt name collapses to the same key as the plain chain name")
+func storeNumberedNameMatchesPlainChainName() {
+    #expect(PolicyTable.normalize("BEST BUY #1234") == PolicyTable.normalize("Best Buy"))
+}
+
+@Test("A digit that is part of the name, not a store number, survives normalization")
+func trailingDigitWithoutSeparatorSurvives() {
+    #expect(PolicyTable.normalize("7-Eleven") == "7eleven")
+}
+
+@Test("A name ending in a legitimate space-separated number loses that suffix (known, accepted limitation)")
+func spaceSeparatedTrailingNumberIsStripped() {
+    // "Studio 54" is indistinguishable from a store-numbered receipt like
+    // "Target 0428" by this heuristic, so it normalizes to "studio". A
+    // resulting key miss is a safe failure (nil -> the app asks the user),
+    // not a dangerous merchant collision, so this tradeoff is accepted.
+    #expect(PolicyTable.normalize("Studio 54") == "studio")
 }
 
 @Test("Returns the rule in effect on the purchase date, not the newest rule")
