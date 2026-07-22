@@ -22,6 +22,7 @@ targets:
       path: App/Info.plist
       properties:
         CFBundleDisplayName: iPrint
+        NSCameraUsageDescription: iPrint uses the camera to scan paper receipts so it can log purchases and track return windows.
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait

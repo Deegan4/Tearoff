@@ -3,6 +3,7 @@ import VaultCore
 
 struct PurchaseDetailView: View {
     let purchase: StoredPurchase
+    @State private var showReceipt = false
 
     var body: some View {
         Form {
@@ -38,5 +39,13 @@ struct PurchaseDetailView: View {
             }
         }
         .navigationTitle(purchase.merchant)
+        .toolbar {
+            ToolbarItem(placement: .primaryAction) {
+                Button("Receipt", systemImage: "printer") { showReceipt = true }
+            }
+        }
+        .fullScreenCover(isPresented: $showReceipt) {
+            ReceiptPrintView(purchase: purchase) { showReceipt = false }
+        }
     }
 }

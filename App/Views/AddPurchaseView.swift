@@ -6,11 +6,29 @@ struct AddPurchaseView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
 
-    @State private var merchant = ""
-    @State private var purchaseDate = Date()
-    @State private var amountText = ""
+    @State private var merchant: String
+    @State private var purchaseDate: Date
+    @State private var amountText: String
     @State private var category: PurchaseCategory = .other
-    @State private var note = ""
+    @State private var note: String
+    @State private var printed: StoredPurchase?
+
+    private let fromScan: Bool
+
+    /// Blank for manual entry, or seeded from an OCR result so the scan
+    /// becomes an editable confirm step before the receipt prints.
+    init(prefill: ParsedReceipt? = nil) {
+        fromScan = prefill != nil
+        _merchant = State(initialValue: prefill?.merchant ?? "")
+        _purchaseDate = State(initialValue: prefill?.date ?? Date())
+        _amountText = State(initialValue: Self.amountString(prefill?.totalCents))
+        _note = State(initialValue: prefill != nil ? "Scanned receipt" : "")
+    }
+
+    private static func amountString(_ cents: Cents?) -> String {
+        guard let cents, cents.raw > 0 else { return "" }
+        return String(format: "%d.%02d", cents.raw / 100, cents.raw % 100)
+    }
 
     private var amountCents: Cents? {
         // Parse dollars-and-cents input into exact minor units without
@@ -55,7 +73,7 @@ struct AddPurchaseView: View {
                     }
                 }
             }
-            .navigationTitle("Add Purchase")
+            .navigationTitle(fromScan ? "Confirm Receipt" : "Add Purchase")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -64,6 +82,9 @@ struct AddPurchaseView: View {
                     Button("Save") { save() }
                         .disabled(merchant.trimmingCharacters(in: .whitespaces).isEmpty || amountCents == nil)
                 }
+            }
+            .fullScreenCover(item: $printed) { purchase in
+                ReceiptPrintView(purchase: purchase) { dismiss() }
             }
         }
     }
@@ -93,6 +114,7 @@ struct AddPurchaseView: View {
             )
         }
 
-        dismiss()
+        // Print the receipt; its Done button dismisses the form.
+        printed = purchase
     }
 }
