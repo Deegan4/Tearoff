@@ -1,9 +1,11 @@
 import SwiftUI
 import SwiftData
-import VisionKit
+import UIKit
 import VaultCore
 
 struct VaultView: View {
+    @Environment(\.modelContext) private var context
+
     @Query(sort: \StoredPurchase.purchaseDate, order: .reverse)
     private var purchases: [StoredPurchase]
 
@@ -16,13 +18,16 @@ struct VaultView: View {
 
     var body: some View {
         NavigationSplitView {
-            List(purchases, selection: $selection) { purchase in
-                NavigationLink(value: purchase) {
-                    PurchaseRow(
-                        purchase: purchase,
-                        returnWindow: ResolverStore.shared.returnWindow(for: purchase)
-                    )
+            List(selection: $selection) {
+                ForEach(purchases) { purchase in
+                    NavigationLink(value: purchase) {
+                        PurchaseRow(
+                            purchase: purchase,
+                            returnWindow: ResolverStore.shared.returnWindow(for: purchase)
+                        )
+                    }
                 }
+                .onDelete(perform: delete)
             }
             .navigationTitle("Vault")
             .overlay {
@@ -36,7 +41,7 @@ struct VaultView: View {
             }
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    if VNDocumentCameraViewController.isSupported {
+                    if ReceiptCamera.isAvailable {
                         Button("Scan", systemImage: "camera") { isScanning = true }
                     }
                 }
@@ -45,8 +50,8 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
-            .sheet(isPresented: $isScanning) {
-                DocumentScanner { image in
+            .fullScreenCover(isPresented: $isScanning) {
+                ReceiptCamera { image in
                     isScanning = false
                     guard let image else { return }
                     Task { await process(image) }
@@ -96,6 +101,18 @@ struct VaultView: View {
         }
 
         draft = ScanDraft(parsed: ReceiptParser.parse(lines))
+    }
+
+    /// Delete swiped rows: cancel their pending alerts, drop the detail
+    /// selection if it pointed at a deleted row, then remove from the store.
+    private func delete(at offsets: IndexSet) {
+        let doomed = offsets.map { purchases[$0] }
+        for purchase in doomed {
+            if selection == purchase { selection = nil }
+            let id = purchase.id
+            Task { await NotificationScheduler.shared.cancel(purchaseID: id) }
+            context.delete(purchase)
+        }
     }
 }
 
