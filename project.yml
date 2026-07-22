@@ -1,0 +1,38 @@
+name: iPrint
+options:
+  bundleIdPrefix: com.iprint
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+packages:
+  VaultCore:
+    path: Packages/VaultCore
+
+targets:
+  iPrint:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: App
+    dependencies:
+      - package: VaultCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: iPrint
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.iprint.app
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        DEVELOPMENT_TEAM: A6H72TGWNL
+        CODE_SIGN_STYLE: Automatic
