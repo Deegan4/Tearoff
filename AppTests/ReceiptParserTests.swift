@@ -17,6 +17,22 @@ struct ReceiptParserTests {
         #expect(r.merchant == "Best Buy")
     }
 
+    @Test("Strips leading/trailing OCR symbols from the merchant", arguments: [
+        ("> pharmacy", "pharmacy"),
+        ("*WALGREENS*", "Walgreens"),
+        ("  ::Target", "Target"),
+    ])
+    func merchantStripsEdgeSymbols(raw: String, expected: String) {
+        let r = ReceiptParser.parse([raw, "TOTAL 5.00"])
+        #expect(r.merchant == expected)
+    }
+
+    @Test("Keeps interior punctuation in the merchant name")
+    func merchantKeepsInteriorPunctuation() {
+        let r = ReceiptParser.parse(["H&M", "TOTAL 5.00"])
+        #expect(r.merchant == "H&M")
+    }
+
     // MARK: Total
 
     @Test("Prefers a labelled TOTAL over larger unrelated amounts")

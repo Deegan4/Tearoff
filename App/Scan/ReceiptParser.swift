@@ -51,7 +51,13 @@ enum ReceiptParser {
     }
 
     private static func normalizeName(_ s: String) -> String {
-        let trimmed = s.trimmingCharacters(in: .whitespaces)
+        // Strip OCR leading/trailing noise: quote marks, bullets, arrows like
+        // ">", stray punctuation — anything that isn't a letter or digit at
+        // either end. Interior characters (e.g. "H&M", "7-Eleven") are kept.
+        let edges = CharacterSet.alphanumerics.inverted
+        let trimmed = s
+            .trimmingCharacters(in: .whitespaces)
+            .trimmingCharacters(in: edges)
         // Collapse ALL-CAPS shouting into Title Case for a tidy slip.
         if trimmed == trimmed.uppercased() && trimmed.contains(where: \.isLetter) {
             return trimmed.capitalized
