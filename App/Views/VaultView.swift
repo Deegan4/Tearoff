@@ -15,11 +15,26 @@ struct VaultView: View {
     @State private var isReadingReceipt = false
     @State private var draft: ScanDraft?
     @State private var scanError: String?
+    @State private var searchText = ""
+    @State private var sort: SortOption = .dateNewest
+
+    /// The `@Query` fetches everything; search and sort are applied in memory.
+    /// A personal receipt vault is small enough that this stays cheap and
+    /// keeps the query itself simple.
+    private var visiblePurchases: [StoredPurchase] {
+        let query = searchText.trimmingCharacters(in: .whitespaces).lowercased()
+        let filtered = query.isEmpty ? purchases : purchases.filter {
+            $0.merchant.lowercased().contains(query)
+                || $0.category.displayName.lowercased().contains(query)
+                || $0.note.lowercased().contains(query)
+        }
+        return filtered.sorted(by: sort.areInOrder)
+    }
 
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
-                ForEach(purchases) { purchase in
+                ForEach(visiblePurchases) { purchase in
                     NavigationLink(value: purchase) {
                         PurchaseRow(
                             purchase: purchase,
@@ -30,6 +45,7 @@ struct VaultView: View {
                 .onDelete(perform: delete)
             }
             .navigationTitle("Vault")
+            .searchable(text: $searchText, prompt: "Merchant, category, or note")
             .overlay {
                 if purchases.isEmpty {
                     ContentUnavailableView(
@@ -37,6 +53,8 @@ struct VaultView: View {
                         systemImage: "doc.text",
                         description: Text("Scan or add a purchase and iPrint will tell you before the return window closes.")
                     )
+                } else if visiblePurchases.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 }
             }
             .toolbar {
@@ -47,6 +65,15 @@ struct VaultView: View {
                 }
                 ToolbarItem(placement: .primaryAction) {
                     Button("Add", systemImage: "plus") { isAdding = true }
+                }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu("Sort", systemImage: "arrow.up.arrow.down") {
+                        Picker("Sort", selection: $sort) {
+                            ForEach(SortOption.allCases) { option in
+                                Text(option.label).tag(option)
+                            }
+                        }
+                    }
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
@@ -105,8 +132,10 @@ struct VaultView: View {
 
     /// Delete swiped rows: cancel their pending alerts, drop the detail
     /// selection if it pointed at a deleted row, then remove from the store.
+    /// Offsets index the currently visible (filtered/sorted) list.
     private func delete(at offsets: IndexSet) {
-        let doomed = offsets.map { purchases[$0] }
+        let visible = visiblePurchases
+        let doomed = offsets.map { visible[$0] }
         for purchase in doomed {
             if selection == purchase { selection = nil }
             let id = purchase.id
@@ -120,6 +149,32 @@ struct VaultView: View {
 private struct ScanDraft: Identifiable {
     let id = UUID()
     let parsed: ParsedReceipt
+}
+
+/// Ways to order the vault. `areInOrder` gives each case a sort predicate so
+/// the view stays declarative.
+private enum SortOption: String, CaseIterable, Identifiable {
+    case dateNewest, dateOldest, merchant, amountHigh
+
+    var id: String { rawValue }
+
+    var label: String {
+        switch self {
+        case .dateNewest: "Newest first"
+        case .dateOldest: "Oldest first"
+        case .merchant:   "Merchant (A–Z)"
+        case .amountHigh: "Amount (high–low)"
+        }
+    }
+
+    func areInOrder(_ a: StoredPurchase, _ b: StoredPurchase) -> Bool {
+        switch self {
+        case .dateNewest: a.purchaseDate > b.purchaseDate
+        case .dateOldest: a.purchaseDate < b.purchaseDate
+        case .merchant:   a.merchant.localizedCaseInsensitiveCompare(b.merchant) == .orderedAscending
+        case .amountHigh: a.totalCentsRaw > b.totalCentsRaw
+        }
+    }
 }
 
 private struct ReadingReceiptOverlay: View {
