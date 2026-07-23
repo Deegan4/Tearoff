@@ -326,9 +326,19 @@ struct ReceiptPrintView: View {
             jitter = 1.5
         }
         // The sheet feeds out and decelerates as it comes to rest.
-        withAnimation(.easeOut(duration: 2.0)) {
+        let feedDuration = 2.0
+        withAnimation(.easeOut(duration: feedDuration)) {
             progress = 1
-        } completion: {
+        }
+
+        // Flip to the finished state on a fixed timer rather than the feed
+        // animation's completion callback. The repeating `jitter` keeps the
+        // paper's offset perpetually in motion, which can stop that callback
+        // from ever firing — leaving `done` false and the Done button stuck
+        // disabled. A timer guarantees the button becomes tappable.
+        Task { @MainActor in
+            try? await Task.sleep(for: .seconds(feedDuration))
+            guard !done else { return }
             feedBlink = false
             // Stop the feed stepping and drop the tear-off edge.
             withAnimation(.easeOut(duration: 0.15)) { jitter = 0 }
