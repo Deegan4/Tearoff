@@ -24,6 +24,7 @@ struct ReceiptPrintView: View {
     }
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dismiss) private var dismiss
 
     @State private var paperHeight: CGFloat = 0
     @State private var progress: CGFloat = 0      // 0 = tucked in slot, 1 = fully printed
@@ -79,7 +80,13 @@ struct ReceiptPrintView: View {
 
             VStack {
                 Spacer()
-                Button(action: onDone) {
+                Button {
+                    // Dismiss our own cover directly — reliable regardless of
+                    // how the presenter is nested — then let the presenter do
+                    // any extra teardown (e.g. close the form back to the vault).
+                    dismiss()
+                    onDone()
+                } label: {
                     Text(done ? "Done" : "Printing…")
                         .font(.headline)
                         .frame(maxWidth: .infinity)
