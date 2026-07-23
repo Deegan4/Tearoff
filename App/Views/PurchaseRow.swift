@@ -15,7 +15,13 @@ struct PurchaseRow: View {
                     .font(.subheadline.monospacedDigit())
             }
 
-            if let window = returnWindow {
+            if purchase.status.isResolved {
+                // A resolved purchase is done with its window — show the
+                // outcome, not a countdown, and never the urgency pulse.
+                Label(purchase.status.label, systemImage: purchase.status.systemImage)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            } else if let window = returnWindow {
                 let days = window.daysRemaining(asOf: .now)
                 let urgent = (0...3).contains(days)
                 HStack(spacing: 5) {

@@ -23,6 +23,22 @@ struct PurchaseDetailView: View {
 
     var body: some View {
         Form {
+            Section("Status") {
+                Menu {
+                    ForEach(PurchaseStatus.allCases) { option in
+                        Button { setStatus(option) } label: {
+                            Label(option.label, systemImage: option.systemImage)
+                        }
+                    }
+                } label: {
+                    LabeledContent("Status") {
+                        Label(purchase.status.label, systemImage: purchase.status.systemImage)
+                            .foregroundStyle(purchase.status.isResolved ? .secondary : .primary)
+                    }
+                }
+            }
+            .staggeredAppear(0)
+
             Section("Purchase") {
                 LabeledContent("Merchant", value: purchase.merchant)
                 LabeledContent("Date", value: purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))
@@ -120,6 +136,26 @@ struct PurchaseDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes the record and cancels its alerts.")
+        }
+    }
+
+    /// Change lifecycle status. Resolving cancels pending alerts; reactivating
+    /// reschedules them from the current windows.
+    private func setStatus(_ status: PurchaseStatus) {
+        purchase.status = status
+        let id = purchase.id
+        if status.isResolved {
+            Task { await NotificationScheduler.shared.cancel(purchaseID: id) }
+        } else {
+            let merchant = purchase.merchant
+            let returnWindow = ResolverStore.shared.returnWindow(for: purchase)
+            let warranty = ResolverStore.shared.warrantyWindow(for: purchase)
+            Task {
+                await NotificationScheduler.shared.schedule(
+                    purchaseID: id, merchant: merchant,
+                    returnWindow: returnWindow, warranty: warranty
+                )
+            }
         }
     }
 
