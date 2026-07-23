@@ -110,7 +110,12 @@ private struct ReceiptImageViewer: View {
     let image: UIImage
     var onDone: () -> Void
 
+    // `zoom` is the live scale; `committed` is the scale settled after the
+    // last gesture, so successive pinches accumulate instead of resetting.
     @State private var zoom: CGFloat = 1
+    @State private var committed: CGFloat = 1
+
+    private let range: ClosedRange<CGFloat> = 1...4
 
     var body: some View {
         NavigationStack {
@@ -121,9 +126,17 @@ private struct ReceiptImageViewer: View {
                     .scaleEffect(zoom)
                     .gesture(
                         MagnifyGesture()
-                            .onChanged { zoom = max(1, $0.magnification) }
-                            .onEnded { _ in withAnimation(.spring) { zoom = max(1, min(zoom, 4)) } }
+                            .onChanged { zoom = clamp(committed * $0.magnification) }
+                            .onEnded { _ in committed = zoom }
                     )
+                    // Double-tap toggles between fit and 2×, and gives an
+                    // always-available way back to fit when zoomed in.
+                    .onTapGesture(count: 2) {
+                        withAnimation(.spring) {
+                            zoom = zoom > 1 ? 1 : 2
+                            committed = zoom
+                        }
+                    }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
             }
             .background(Color.black)
@@ -135,5 +148,9 @@ private struct ReceiptImageViewer: View {
             .navigationTitle("Receipt")
             .navigationBarTitleDisplayMode(.inline)
         }
+    }
+
+    private func clamp(_ value: CGFloat) -> CGFloat {
+        min(max(value, range.lowerBound), range.upperBound)
     }
 }
