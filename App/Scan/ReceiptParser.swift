@@ -173,14 +173,15 @@ enum ReceiptParser {
     // MARK: Printed warranty — "1 year warranty" / "12 month warranty".
 
     private static func warrantyMonths(in hay: String) -> Int? {
-        // Years, either side of the word "warranty".
-        for p in [#"(\d{1,2})\s*(?:year|yr)s?[^.\n]{0,16}?warrant"#,
-                  #"warrant[^.\n]{0,16}?(\d{1,2})\s*(?:year|yr)s?"#] {
+        // Years, either side of the word "warranty". `[\s-]*` allows the
+        // hyphenated "2-year" form as well as "2 year".
+        for p in [#"(\d{1,2})[\s-]*(?:year|yr)s?[^.\n]{0,16}?warrant"#,
+                  #"warrant[^.\n]{0,16}?(\d{1,2})[\s-]*(?:year|yr)s?"#] {
             if let y = firstInt(p, in: hay), (1...10).contains(y) { return y * 12 }
         }
         // Months, either side.
-        for p in [#"(\d{1,3})\s*month[^.\n]{0,16}?warrant"#,
-                  #"warrant[^.\n]{0,16}?(\d{1,3})\s*month"#] {
+        for p in [#"(\d{1,3})[\s-]*month[^.\n]{0,16}?warrant"#,
+                  #"warrant[^.\n]{0,16}?(\d{1,3})[\s-]*month"#] {
             if let m = firstInt(p, in: hay), (1...120).contains(m) { return m }
         }
         return nil

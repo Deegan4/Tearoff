@@ -37,3 +37,22 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         DEVELOPMENT_TEAM: A6H72TGWNL
         CODE_SIGN_STYLE: Automatic
+    scheme:
+      testTargets:
+        - iPrintTests
+
+  iPrintTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: iPrint
+      - package: VaultCore
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.iprint.app.tests
