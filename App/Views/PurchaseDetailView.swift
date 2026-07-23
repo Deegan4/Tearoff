@@ -10,6 +10,8 @@ struct PurchaseDetailView: View {
     let purchase: StoredPurchase
     @State private var isEditing = false
     @State private var confirmDelete = false
+    @State private var proof: Image?
+    @Environment(\.displayScale) private var displayScale
     // A single cover slot: presenting two `.fullScreenCover` modifiers on one
     // view is a SwiftUI bug where the second blocks the first from dismissing,
     // which left the receipt's Done button unable to close. One item-driven
@@ -117,7 +119,20 @@ struct PurchaseDetailView: View {
             ToolbarItem(placement: .secondaryAction) {
                 Button("Receipt", systemImage: "printer") { cover = .receipt }
             }
+            ToolbarItem(placement: .secondaryAction) {
+                // ShareLink manages its own presentation, so it adds no extra
+                // sheet/cover modifier to conflict with the ones above.
+                if let proof {
+                    ShareLink(
+                        item: proof,
+                        preview: SharePreview("\(purchase.merchant) — proof of purchase", image: proof)
+                    ) {
+                        Label("Share proof", systemImage: "square.and.arrow.up")
+                    }
+                }
+            }
         }
+        .task { renderProof() }
         .sheet(isPresented: $isEditing) {
             AddPurchaseView(editing: purchase)
         }
@@ -136,6 +151,20 @@ struct PurchaseDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes the record and cancels its alerts.")
+        }
+    }
+
+    /// Render the shareable proof card once when the detail appears.
+    @MainActor private func renderProof() {
+        let card = ProofCard(
+            purchase: purchase,
+            returnWindow: ResolverStore.shared.returnWindow(for: purchase),
+            warranty: ResolverStore.shared.warrantyWindow(for: purchase)
+        )
+        let renderer = ImageRenderer(content: card)
+        renderer.scale = displayScale
+        if let image = renderer.uiImage {
+            proof = Image(uiImage: image)
         }
     }
 
