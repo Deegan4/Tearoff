@@ -64,7 +64,7 @@ struct VaultView: View {
                                 .symbolEffect(.bounce, options: .repeat(.periodic(delay: 2.5)))
                         }
                     } description: {
-                        Text("Scan or add a purchase and iPrint will tell you before the return window closes.")
+                        Text("Scan or add a purchase and Tearoff will tell you before the return window closes.")
                     }
                     .transition(.scale(scale: 0.92).combined(with: .opacity))
                 } else if visiblePurchases.isEmpty {

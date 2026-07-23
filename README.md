@@ -1,6 +1,6 @@
-# iPrint
+# Tearoff
 
-Scan a paper receipt and iPrint logs the purchase, then tracks when you can
+Scan a paper receipt and Tearoff logs the purchase, then tracks when you can
 still **return** it and how long its **warranty** lasts — surfacing each
 window with a clear, honest note about where the date came from.
 
@@ -62,20 +62,20 @@ generate it first:
 ```bash
 brew install xcodegen   # once
 xcodegen generate
-open iPrint.xcodeproj
+open Tearoff.xcodeproj
 ```
 
 Or from the command line (Debug, simulator):
 
 ```bash
-xcodebuild -project iPrint.xcodeproj -scheme iPrint \
+xcodebuild -project Tearoff.xcodeproj -scheme Tearoff \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' build
 ```
 
 ## Tests
 
 ```bash
-xcodebuild -project iPrint.xcodeproj -scheme iPrint \
+xcodebuild -project Tearoff.xcodeproj -scheme Tearoff \
   -destination 'platform=iOS Simulator,name=iPhone 17 Pro' test
 ```
 

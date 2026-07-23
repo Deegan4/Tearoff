@@ -1,6 +1,6 @@
 import Testing
 import Foundation
-@testable import iPrint
+@testable import Tearoff
 import VaultCore
 
 /// Tests for the heuristic receipt parser. The parser is deliberately

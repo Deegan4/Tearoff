@@ -2,7 +2,7 @@ import SwiftUI
 import SwiftData
 
 @main
-struct iPrintApp: App {
+struct TearoffApp: App {
     var body: some Scene {
         WindowGroup {
             VaultView()

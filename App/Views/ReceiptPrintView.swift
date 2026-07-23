@@ -230,7 +230,7 @@ struct ReceiptPrintView: View {
     private var rows: [AnyView] {
         var r: [AnyView] = []
         r.append(AnyView(
-            Text("iPRINT")
+            Text("TEAROFF")
                 .font(.system(.title3, design: .monospaced).weight(.bold))
                 .tracking(6)
         ))

@@ -2,7 +2,7 @@ import Foundation
 
 /// An amount of money in integer minor units (e.g. US cents).
 ///
-/// Money is never stored as a floating-point value anywhere in iPrint.
+/// Money is never stored as a floating-point value anywhere in Tearoff.
 /// Binary floating point cannot represent 0.10 exactly, and accumulated
 /// error in a totals column is a correctness bug that surfaces as a
 /// receipt that does not match the paper one.

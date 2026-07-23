@@ -1,6 +1,6 @@
-name: iPrint
+name: Tearoff
 options:
-  bundleIdPrefix: com.iprint
+  bundleIdPrefix: com.tearoff
   deploymentTarget:
     iOS: "26.0"
   createIntermediateGroups: true
@@ -10,7 +10,7 @@ packages:
     path: Packages/VaultCore
 
 targets:
-  iPrint:
+  Tearoff:
     type: application
     platform: iOS
     deploymentTarget: "26.0"
@@ -21,8 +21,8 @@ targets:
     info:
       path: App/Info.plist
       properties:
-        CFBundleDisplayName: iPrint
-        NSCameraUsageDescription: iPrint uses the camera to scan paper receipts so it can log purchases and track return windows.
+        CFBundleDisplayName: Tearoff
+        NSCameraUsageDescription: Tearoff uses the camera to scan paper receipts so it can log purchases and track return windows.
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
@@ -30,7 +30,7 @@ targets:
           - UIInterfaceOrientationLandscapeRight
     settings:
       base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.iprint.app
+        PRODUCT_BUNDLE_IDENTIFIER: com.tearoff.app
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
         TARGETED_DEVICE_FAMILY: "1,2"
@@ -39,20 +39,20 @@ targets:
         CODE_SIGN_STYLE: Automatic
     scheme:
       testTargets:
-        - iPrintTests
+        - TearoffTests
 
-  iPrintTests:
+  TearoffTests:
     type: bundle.unit-test
     platform: iOS
     deploymentTarget: "26.0"
     sources:
       - path: AppTests
     dependencies:
-      - target: iPrint
+      - target: Tearoff
       - package: VaultCore
     settings:
       base:
         SWIFT_VERSION: "6.0"
         SWIFT_STRICT_CONCURRENCY: complete
         GENERATE_INFOPLIST_FILE: YES
-        PRODUCT_BUNDLE_IDENTIFIER: com.iprint.app.tests
+        PRODUCT_BUNDLE_IDENTIFIER: com.tearoff.app.tests
