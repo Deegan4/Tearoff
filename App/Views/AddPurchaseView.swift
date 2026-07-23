@@ -40,14 +40,16 @@ struct AddPurchaseView: View {
         _merchant = State(initialValue: prefill?.merchant ?? "")
         _purchaseDate = State(initialValue: prefill?.date ?? Date())
         _amountText = State(initialValue: Self.amountString(prefill?.totalCents))
-        _category = State(initialValue: .other)
+        _category = State(initialValue: prefill?.category ?? .other)
         _note = State(initialValue: prefill != nil ? "Scanned receipt" : "")
-        _printedReturnOn = State(initialValue: false)
-        _printedReturnDays = State(initialValue: 30)
+        // Pre-arm the printed-window toggles when the scan read a term off
+        // the slip, so the user confirms rather than re-enters it.
+        _printedReturnOn = State(initialValue: prefill?.printedReturnDays != nil)
+        _printedReturnDays = State(initialValue: prefill?.printedReturnDays ?? 30)
         _userReturnOn = State(initialValue: false)
         _userReturnDays = State(initialValue: 30)
-        _printedWarrantyOn = State(initialValue: false)
-        _printedWarrantyMonths = State(initialValue: 12)
+        _printedWarrantyOn = State(initialValue: prefill?.printedWarrantyMonths != nil)
+        _printedWarrantyMonths = State(initialValue: prefill?.printedWarrantyMonths ?? 12)
         _userWarrantyOn = State(initialValue: false)
         _userWarrantyMonths = State(initialValue: 12)
     }
