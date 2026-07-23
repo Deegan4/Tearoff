@@ -18,6 +18,10 @@ final class StoredPurchase {
     var userWarrantyMonths: Int?
     var note: String = ""
 
+    /// The scanned receipt image, downsampled. Held in external storage so the
+    /// SwiftData store stays small; `nil` for manually-entered purchases.
+    @Attribute(.externalStorage) var receiptImageData: Data?
+
     init(
         merchant: String,
         purchaseDate: Date,

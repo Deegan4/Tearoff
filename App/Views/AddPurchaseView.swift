@@ -29,14 +29,17 @@ struct AddPurchaseView: View {
 
     private let editing: StoredPurchase?
     private let fromScan: Bool
+    /// Set only on the scan path; carried onto the new record at save time.
+    private let receiptImageData: Data?
 
     // MARK: Init
 
     /// Blank for manual entry, or seeded from an OCR result so a scan becomes
     /// an editable confirm step before the receipt prints.
-    init(prefill: ParsedReceipt? = nil) {
+    init(prefill: ParsedReceipt? = nil, receiptImageData: Data? = nil) {
         editing = nil
         fromScan = prefill != nil
+        self.receiptImageData = receiptImageData
         _merchant = State(initialValue: prefill?.merchant ?? "")
         _purchaseDate = State(initialValue: prefill?.date ?? Date())
         _amountText = State(initialValue: Self.amountString(prefill?.totalCents))
@@ -58,6 +61,7 @@ struct AddPurchaseView: View {
     init(editing purchase: StoredPurchase) {
         editing = purchase
         fromScan = false
+        receiptImageData = nil   // editing preserves the record's existing image
         _merchant = State(initialValue: purchase.merchant)
         _purchaseDate = State(initialValue: purchase.purchaseDate)
         _amountText = State(initialValue: Self.amountString(purchase.totalCents))
@@ -233,6 +237,7 @@ struct AddPurchaseView: View {
                 category: category,
                 note: note
             )
+            target.receiptImageData = receiptImageData
             context.insert(target)
         }
 

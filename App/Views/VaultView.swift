@@ -86,7 +86,7 @@ struct VaultView: View {
                 .ignoresSafeArea()
             }
             .sheet(item: $draft) { draft in
-                AddPurchaseView(prefill: draft.parsed)
+                AddPurchaseView(prefill: draft.parsed, receiptImageData: draft.imageData)
             }
             .overlay {
                 if isReadingReceipt {
@@ -127,7 +127,12 @@ struct VaultView: View {
             return
         }
 
-        draft = ScanDraft(parsed: ReceiptParser.parse(lines))
+        // OCR runs on the full-resolution capture above; keep a downsampled
+        // copy of the same image to store with the record.
+        draft = ScanDraft(
+            parsed: ReceiptParser.parse(lines),
+            imageData: ReceiptImage.forStorage(image)
+        )
     }
 
     /// Delete swiped rows: cancel their pending alerts, drop the detail
@@ -149,6 +154,8 @@ struct VaultView: View {
 private struct ScanDraft: Identifiable {
     let id = UUID()
     let parsed: ParsedReceipt
+    /// Downsampled JPEG of the scanned page, retained on the saved record.
+    var imageData: Data?
 }
 
 /// Ways to order the vault. `areInOrder` gives each case a sort predicate so
