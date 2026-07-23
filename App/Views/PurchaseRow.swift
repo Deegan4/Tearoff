@@ -17,11 +17,21 @@ struct PurchaseRow: View {
 
             if let window = returnWindow {
                 let days = window.daysRemaining(asOf: .now)
-                Text(days >= 0
-                     ? "Return within \(days) day\(days == 1 ? "" : "s") — \(window.provenance.explanation)"
-                     : "Return window closed — \(window.provenance.explanation)")
-                    .font(.caption)
-                    .foregroundStyle(days < 0 ? Color.secondary : (days <= 3 ? .red : .secondary))
+                let urgent = (0...3).contains(days)
+                HStack(spacing: 5) {
+                    if urgent {
+                        // Pulses while the return window is about to close.
+                        Image(systemName: "clock.badge.exclamationmark")
+                            .font(.caption)
+                            .foregroundStyle(.red)
+                            .symbolEffect(.pulse, options: .repeating)
+                    }
+                    Text(days >= 0
+                         ? "Return within \(days) day\(days == 1 ? "" : "s") — \(window.provenance.explanation)"
+                         : "Return window closed — \(window.provenance.explanation)")
+                        .font(.caption)
+                        .foregroundStyle(days < 0 ? Color.secondary : (urgent ? .red : .secondary))
+                }
             } else {
                 Text(purchase.category.isReturnable
                      ? "No return window on file"

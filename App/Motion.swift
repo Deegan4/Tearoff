@@ -12,4 +12,30 @@ enum Motion {
 
     /// Slow, cinematic reveal for first-appearance content.
     static let reveal = Animation.spring(response: 0.62, dampingFraction: 0.88, blendDuration: 0)
+
+    /// Edge-of-playful: a touch more overshoot for moments that should feel
+    /// alive (empty states, staggered reveals) without going full bounce.
+    static let alive = Animation.spring(response: 0.42, dampingFraction: 0.72, blendDuration: 0)
+}
+
+/// Fades and lifts a view in on first appearance, offset by `index` so a
+/// stack of them cascades. Uses `withAnimation` in `onAppear` so the delay is
+/// honoured per element.
+struct StaggeredAppear: ViewModifier {
+    let index: Int
+    @State private var shown = false
+
+    func body(content: Content) -> some View {
+        content
+            .opacity(shown ? 1 : 0)
+            .offset(y: shown ? 0 : 14)
+            .onAppear {
+                withAnimation(Motion.alive.delay(Double(index) * 0.07)) { shown = true }
+            }
+    }
+}
+
+extension View {
+    /// Cascading fade-and-lift entrance. Pass the element's position.
+    func staggeredAppear(_ index: Int) -> some View { modifier(StaggeredAppear(index: index)) }
 }

@@ -21,14 +21,26 @@ struct PurchaseDetailView: View {
                 LabeledContent("Total", value: purchase.totalCents.formatted(currencyCode: "USD"))
                 LabeledContent("Category", value: purchase.category.displayName)
             }
+            .staggeredAppear(0)
 
             if let window = ResolverStore.shared.returnWindow(for: purchase) {
                 Section("Return window") {
-                    LabeledContent("Return by", value: window.deadline.formatted(date: .abbreviated, time: .omitted))
+                    LabeledContent("Return by") {
+                        HStack(spacing: 6) {
+                            // A pulsing urgency cue when the window is closing.
+                            if (0...3).contains(window.daysRemaining(asOf: .now)) {
+                                Image(systemName: "clock.badge.exclamationmark")
+                                    .foregroundStyle(.red)
+                                    .symbolEffect(.pulse, options: .repeating)
+                            }
+                            Text(window.deadline.formatted(date: .abbreviated, time: .omitted))
+                        }
+                    }
                     Text(window.provenance.explanation)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                 }
+                .staggeredAppear(1)
             }
 
             if let warranty = ResolverStore.shared.warrantyWindow(for: purchase) {
@@ -40,10 +52,12 @@ struct PurchaseDetailView: View {
                         .font(.caption)
                         .foregroundStyle(warranty.provenance.isEstimate ? .orange : .secondary)
                 }
+                .staggeredAppear(2)
             }
 
             if !purchase.note.isEmpty {
                 Section("Note") { Text(purchase.note) }
+                    .staggeredAppear(3)
             }
 
             if let data = purchase.receiptImageData, let image = UIImage(data: data) {
@@ -61,6 +75,7 @@ struct PurchaseDetailView: View {
                     .buttonStyle(.plain)
                     .accessibilityLabel("Scanned receipt, tap to enlarge")
                 }
+                .staggeredAppear(4)
             }
 
             Section {
@@ -68,6 +83,7 @@ struct PurchaseDetailView: View {
                     confirmDelete = true
                 }
             }
+            .staggeredAppear(5)
         }
         .navigationTitle(purchase.merchant)
         .toolbar {

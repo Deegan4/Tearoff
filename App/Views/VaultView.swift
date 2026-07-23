@@ -63,15 +63,25 @@ struct VaultView: View {
             .searchable(text: $searchText, prompt: "Merchant, category, or note")
             .overlay {
                 if purchases.isEmpty {
-                    ContentUnavailableView(
-                        "No receipts yet",
-                        systemImage: "doc.text",
-                        description: Text("Scan or add a purchase and iPrint will tell you before the return window closes.")
-                    )
+                    ContentUnavailableView {
+                        Label {
+                            Text("No receipts yet")
+                        } icon: {
+                            // The icon breathes with a gentle periodic bounce so
+                            // the blank screen feels alive, not dead.
+                            Image(systemName: "doc.text")
+                                .symbolEffect(.bounce, options: .repeat(.periodic(delay: 2.5)))
+                        }
+                    } description: {
+                        Text("Scan or add a purchase and iPrint will tell you before the return window closes.")
+                    }
+                    .transition(.scale(scale: 0.92).combined(with: .opacity))
                 } else if visiblePurchases.isEmpty {
                     ContentUnavailableView.search(text: searchText)
+                        .transition(.opacity)
                 }
             }
+            .animation(Motion.alive, value: purchases.isEmpty)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if ReceiptCamera.isAvailable {
