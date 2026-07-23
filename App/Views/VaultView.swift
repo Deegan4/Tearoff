@@ -42,15 +42,6 @@ struct VaultView: View {
                             returnWindow: ResolverStore.shared.returnWindow(for: purchase)
                         )
                     }
-                    // Rows ease in as they scroll into view: a restrained lift
-                    // and fade, weighted so it reads premium rather than jumpy.
-                    .scrollTransition(.animated(Motion.premium)) { content, phase in
-                        content
-                            .opacity(phase.isIdentity ? 1 : 0.25)
-                            .scaleEffect(phase.isIdentity ? 1 : 0.94, anchor: .top)
-                            .blur(radius: phase.isIdentity ? 0 : 2)
-                            .offset(y: phase.isIdentity ? 0 : 8)
-                    }
                     // Hero: the tapped row is the zoom source that the detail
                     // view morphs out of (and back into on dismiss).
                     .matchedTransitionSource(id: purchase.id, in: heroNS)
