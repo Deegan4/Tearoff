@@ -8,10 +8,18 @@ struct PurchaseDetailView: View {
     @Environment(\.dismiss) private var dismiss
 
     let purchase: StoredPurchase
-    @State private var showReceipt = false
     @State private var isEditing = false
     @State private var confirmDelete = false
-    @State private var showScanImage = false
+    // A single cover slot: presenting two `.fullScreenCover` modifiers on one
+    // view is a SwiftUI bug where the second blocks the first from dismissing,
+    // which left the receipt's Done button unable to close. One item-driven
+    // cover avoids the conflict entirely.
+    @State private var cover: DetailCover?
+
+    private enum DetailCover: Identifiable {
+        case receipt, scanImage
+        var id: Self { self }
+    }
 
     var body: some View {
         Form {
@@ -63,7 +71,7 @@ struct PurchaseDetailView: View {
             if let data = purchase.receiptImageData, let image = UIImage(data: data) {
                 Section("Scanned receipt") {
                     Button {
-                        showScanImage = true
+                        cover = .scanImage
                     } label: {
                         Image(uiImage: image)
                             .resizable()
@@ -91,18 +99,20 @@ struct PurchaseDetailView: View {
                 Button("Edit") { isEditing = true }
             }
             ToolbarItem(placement: .secondaryAction) {
-                Button("Receipt", systemImage: "printer") { showReceipt = true }
+                Button("Receipt", systemImage: "printer") { cover = .receipt }
             }
         }
         .sheet(isPresented: $isEditing) {
             AddPurchaseView(editing: purchase)
         }
-        .fullScreenCover(isPresented: $showReceipt) {
-            ReceiptPrintView(purchase: purchase) { showReceipt = false }
-        }
-        .fullScreenCover(isPresented: $showScanImage) {
-            if let data = purchase.receiptImageData, let image = UIImage(data: data) {
-                ReceiptImageViewer(image: image) { showScanImage = false }
+        .fullScreenCover(item: $cover) { which in
+            switch which {
+            case .receipt:
+                ReceiptPrintView(purchase: purchase) { cover = nil }
+            case .scanImage:
+                if let data = purchase.receiptImageData, let image = UIImage(data: data) {
+                    ReceiptImageViewer(image: image) { cover = nil }
+                }
             }
         }
         .confirmationDialog("Delete this purchase?", isPresented: $confirmDelete, titleVisibility: .visible) {
