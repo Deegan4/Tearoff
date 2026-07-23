@@ -10,45 +10,68 @@ struct ReceiptPrintView: View {
     let purchase: StoredPurchase
     var onDone: () -> Void = {}
 
+    // Resolved once at init rather than on every body pass — the resolver does
+    // real work, and `rows` (which reads these) rebuilds throughout the feed
+    // animation.
+    private let returnWindow: WindowResolution?
+    private let warrantyWindow: WindowResolution?
+
+    init(purchase: StoredPurchase, onDone: @escaping () -> Void = {}) {
+        self.purchase = purchase
+        self.onDone = onDone
+        self.returnWindow = ResolverStore.shared.returnWindow(for: purchase)
+        self.warrantyWindow = ResolverStore.shared.warrantyWindow(for: purchase)
+    }
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     @State private var paperHeight: CGFloat = 0
     @State private var progress: CGFloat = 0      // 0 = tucked in slot, 1 = fully printed
-    @State private var sway: Double = 0           // degrees, for the settle wobble
+    @State private var sway: Double = 0           // degrees, gravity pendulum on the hanging paper
+    @State private var jitter: CGFloat = 0        // px, mechanical feed stepping
     @State private var done = false
     @State private var feedBlink = false
 
     private let paperWidth: CGFloat = 268
 
-    private var returnWindow: WindowResolution? {
-        ResolverStore.shared.returnWindow(for: purchase)
-    }
-    private var warrantyWindow: WindowResolution? {
-        ResolverStore.shared.warrantyWindow(for: purchase)
-    }
-
     var body: some View {
         ZStack {
             Color(.systemGroupedBackground).ignoresSafeArea()
 
-            VStack(spacing: 0) {
-                printer
-                    .zIndex(1)
+            // Hidden copy at natural size, purely to measure the paper height
+            // that drives the slide.
+            measuringCopy
 
-                receiptPaper
-                    .rotationEffect(.degrees(sway), anchor: .top)
-                    // Reveal the printed height from the top down: the header
-                    // stays pinned under the slot while paper feeds out below.
-                    .frame(height: max(paperHeight * progress, 0), alignment: .top)
-                    .clipped()
-                    // The leading edge — a roller/print-head shadow — travels
-                    // down with the paper, so it reads as being fed out.
-                    .overlay(alignment: .bottom) {
-                        if !done && progress > 0.01 {
-                            leadingEdge
+            VStack(spacing: 0) {
+                // The whole hanging strip pivots at the slot, so it swings
+                // under gravity like paper dangling from a printer.
+                VStack(spacing: 0) {
+                    printer
+                        .zIndex(1)
+                        .accessibilityHidden(true)
+
+                    // Fixed window at the slot; the fully-printed strip slides
+                    // straight down through it, from tucked-behind (offset up)
+                    // to fully ejected. This is real downward motion, not a
+                    // reveal — the sheet physically comes out of the printer.
+                    ZStack(alignment: .top) {
+                        if paperHeight > 0 {
+                            receiptPaper
+                                .offset(y: -paperHeight * (1 - progress) + jitter)
                         }
                     }
-                    .padding(.top, -7)   // tuck the top under the slot lip
+                    .frame(width: paperWidth, height: paperHeight, alignment: .top)
+                    .clipped()
+                    // Curling leading edge on the part hanging out of the slot.
+                    .overlay(alignment: .bottom) {
+                        if !done && progress > 0.01 && progress < 0.99 {
+                            curlEdge
+                        }
+                    }
+                    .shadow(color: .black.opacity(0.16), radius: 10, x: 0, y: 8)
+                    .padding(.top, -6)   // tuck the window top behind the slot lip
+                }
+                .rotationEffect(.degrees(sway), anchor: .top)
 
                 Spacer(minLength: 0)
             }
@@ -77,59 +100,90 @@ struct ReceiptPrintView: View {
     // MARK: - Printer housing & feed edge
 
     private var printer: some View {
-        ZStack {
-            // Housing body.
-            RoundedRectangle(cornerRadius: 12)
+        let bodyWidth = paperWidth + 72
+        return ZStack {
+            // Rounded printer body with a raised top cover.
+            VStack(spacing: 0) {
+                // Top cover — a slightly lighter lid.
+                RoundedRectangle(cornerRadius: 14)
+                    .fill(
+                        LinearGradient(
+                            colors: [Color(white: 0.40), Color(white: 0.24)],
+                            startPoint: .top, endPoint: .bottom
+                        )
+                    )
+                    .frame(width: bodyWidth - 16, height: 20)
+                    .offset(y: 6)
+                // Front face.
+                UnevenRoundedRectangle(
+                    cornerRadii: .init(topLeading: 6, bottomLeading: 16, bottomTrailing: 16, topTrailing: 6)
+                )
                 .fill(
                     LinearGradient(
-                        colors: [Color(white: 0.34), Color(white: 0.16)],
+                        colors: [Color(white: 0.30), Color(white: 0.15)],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
-                .frame(width: paperWidth + 60, height: 54)
-                .shadow(color: .black.opacity(0.3), radius: 6, y: 3)
-            // A soft power light, blinking while feeding.
-            Circle()
-                .fill(done ? Color.green : Color.orange)
-                .frame(width: 7, height: 7)
-                .opacity(feedBlink ? 1 : 0.3)
-                .offset(x: (paperWidth + 60) / 2 - 16, y: -14)
-            // The exit slot — a recessed dark mouth the paper comes out of.
-            RoundedRectangle(cornerRadius: 3)
+                .frame(width: bodyWidth, height: 46)
+            }
+            .shadow(color: .black.opacity(0.35), radius: 8, y: 4)
+
+            // Controls on the front face: power light + two buttons.
+            HStack(spacing: 10) {
+                Circle()
+                    .fill(done ? Color.green : Color.orange)
+                    .frame(width: 8, height: 8)
+                    .opacity(feedBlink ? 1 : 0.3)
+                    .shadow(color: (done ? Color.green : Color.orange).opacity(0.8), radius: feedBlink ? 4 : 0)
+                Capsule().fill(Color(white: 0.5)).frame(width: 16, height: 5)
+                Capsule().fill(Color(white: 0.5)).frame(width: 16, height: 5)
+            }
+            .offset(x: -bodyWidth / 2 + 34, y: 6)
+
+            // The exit slot — a recessed dark mouth at the bottom lip that the
+            // paper emerges from.
+            RoundedRectangle(cornerRadius: 2)
                 .fill(
                     LinearGradient(
-                        colors: [.black, Color(white: 0.1)],
+                        colors: [.black, Color(white: 0.12)],
                         startPoint: .top, endPoint: .bottom
                     )
                 )
-                .frame(width: paperWidth + 20, height: 10)
-                .overlay(
-                    Capsule().fill(Color.black.opacity(0.9)).frame(height: 4)
-                )
-                .offset(y: 16)
+                .frame(width: paperWidth + 18, height: 8)
+                .overlay(Capsule().fill(Color.black).frame(height: 3))
+                .offset(y: 25)
         }
     }
 
-    /// Roller shadow at the paper's leading edge, sold with a thin dark line
-    /// and a gradient, so the emerging edge looks like it is bending off a
-    /// print roller.
-    private var leadingEdge: some View {
+    /// Curling leading edge: the emerging paper tip catches light on top and
+    /// drops a shadow below, so it reads as a physical curl coming off the
+    /// printer rather than a flat wipe.
+    private var curlEdge: some View {
         ZStack(alignment: .bottom) {
+            // Shadow the curl casts just beneath itself.
             LinearGradient(
-                colors: [.clear, .black.opacity(0.14)],
+                colors: [.clear, .black.opacity(0.18)],
                 startPoint: .top, endPoint: .bottom
             )
-            .frame(height: 16)
-            Rectangle()
-                .fill(Color.black.opacity(0.35))
-                .frame(height: 1.5)
+            .frame(height: 18)
+            // The curled lip: a highlight band capped by a soft fold line.
+            VStack(spacing: 0) {
+                LinearGradient(
+                    colors: [Color.white.opacity(0.0), Color.white],
+                    startPoint: .top, endPoint: .bottom
+                )
+                .frame(height: 7)
+                Rectangle()
+                    .fill(Color.black.opacity(0.28))
+                    .frame(height: 1.5)
+            }
         }
     }
 
     // MARK: - Paper
 
     private var receiptPaper: some View {
-        receiptContent
+        receiptBody
             .padding(.horizontal, 20)
             .padding(.top, 18)
             .padding(.bottom, 22)
@@ -139,7 +193,14 @@ struct ReceiptPrintView: View {
                     .fill(.white)
                     .shadow(color: .black.opacity(0.18), radius: 6, x: 0, y: 4)
             )
-            // Capture the natural paper height once, to drive the reveal.
+    }
+
+    /// Hidden, natural-size render used only to measure the paper's height.
+    private var measuringCopy: some View {
+        receiptPaper
+            .fixedSize(horizontal: false, vertical: true)
+            .hidden()
+            .allowsHitTesting(false)
             .background(
                 GeometryReader { geo in
                     Color.clear
@@ -148,43 +209,54 @@ struct ReceiptPrintView: View {
             )
     }
 
-    private var receiptContent: some View {
+    /// The receipt as an ordered list of rows. VoiceOver reads the whole slip
+    /// as one element; decorative separators and the barcode are hidden below.
+    private var receiptBody: some View {
         VStack(spacing: 8) {
+            ForEach(rows.indices, id: \.self) { i in
+                rows[i]
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var rows: [AnyView] {
+        var r: [AnyView] = []
+        r.append(AnyView(
             Text("iPRINT")
                 .font(.system(.title3, design: .monospaced).weight(.bold))
                 .tracking(6)
-            dashed
-
-            line("MERCHANT", purchase.merchant.isEmpty ? "—" : purchase.merchant)
-            line("DATE", purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))
-            line("CATEGORY", purchase.category.displayName)
-            dashed
-            line("TOTAL", purchase.totalCents.formatted(currencyCode: "USD"), emphasized: true)
-
-            if let w = returnWindow {
-                dashed
-                stacked("RETURN BY",
-                        w.deadline.formatted(date: .abbreviated, time: .omitted),
-                        w.provenance.explanation,
-                        estimate: w.provenance.isEstimate)
-            }
-            if let w = warrantyWindow {
-                dashed
-                stacked("WARRANTY UNTIL",
-                        w.deadline.formatted(date: .abbreviated, time: .omitted),
-                        w.provenance.explanation,
-                        estimate: w.provenance.isEstimate)
-            }
-
-            solid
-            Barcode(seed: purchase.id)
-                .frame(height: 42)
-                .padding(.top, 2)
+        ))
+        r.append(AnyView(dashed))
+        r.append(AnyView(line("MERCHANT", purchase.merchant.isEmpty ? "—" : purchase.merchant)))
+        r.append(AnyView(line("DATE", purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))))
+        r.append(AnyView(line("CATEGORY", purchase.category.displayName)))
+        r.append(AnyView(dashed))
+        r.append(AnyView(line("TOTAL", purchase.totalCents.formatted(currencyCode: "USD"), emphasized: true)))
+        if let w = returnWindow {
+            r.append(AnyView(dashed))
+            r.append(AnyView(stacked("RETURN BY",
+                                     w.deadline.formatted(date: .abbreviated, time: .omitted),
+                                     w.provenance.explanation,
+                                     estimate: w.provenance.isEstimate)))
+        }
+        if let w = warrantyWindow {
+            r.append(AnyView(dashed))
+            r.append(AnyView(stacked("WARRANTY UNTIL",
+                                     w.deadline.formatted(date: .abbreviated, time: .omitted),
+                                     w.provenance.explanation,
+                                     estimate: w.provenance.isEstimate)))
+        }
+        r.append(AnyView(solid))
+        r.append(AnyView(Barcode(seed: purchase.id).frame(height: 42).padding(.top, 2)
+            .accessibilityHidden(true)))
+        r.append(AnyView(
             Text("THANK YOU")
                 .font(.system(.caption2, design: .monospaced))
                 .tracking(3)
                 .foregroundStyle(.secondary)
-        }
+        ))
+        return r
     }
 
     // MARK: - Row builders
@@ -223,6 +295,7 @@ struct ReceiptPrintView: View {
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            .accessibilityHidden(true)
     }
 
     private var solid: some View {
@@ -231,6 +304,7 @@ struct ReceiptPrintView: View {
             .foregroundStyle(.secondary)
             .lineLimit(1)
             .minimumScaleFactor(0.5)
+            .accessibilityHidden(true)
     }
 
     // MARK: - Animation driver
@@ -243,17 +317,26 @@ struct ReceiptPrintView: View {
             return
         }
         // Blink the feed light while paper advances.
-        withAnimation(.easeInOut(duration: 0.35).repeatForever(autoreverses: true)) {
+        withAnimation(.easeInOut(duration: 0.3).repeatForever(autoreverses: true)) {
             feedBlink = true
         }
-        // Linear feed reads as a steady mechanical advance, not a wipe.
-        withAnimation(.linear(duration: 2.1)) {
+        // Tiny rapid vertical stepping — the paper advancing over the feed
+        // roller, not gliding smoothly.
+        withAnimation(.linear(duration: 0.07).repeatForever(autoreverses: true)) {
+            jitter = 1.5
+        }
+        // The sheet feeds out and decelerates as it comes to rest.
+        withAnimation(.easeOut(duration: 2.0)) {
             progress = 1
         } completion: {
             feedBlink = false
-            withAnimation(.easeInOut(duration: 0.2)) { done = true }   // tear-off edge appears
-            sway = 5
-            withAnimation(.interpolatingSpring(stiffness: 130, damping: 6)) {
+            // Stop the feed stepping and drop the tear-off edge.
+            withAnimation(.easeOut(duration: 0.15)) { jitter = 0 }
+            withAnimation(.easeInOut(duration: 0.2)) { done = true }
+            // The freed strip swings once under its own weight and settles —
+            // an underdamped pendulum hinged at the slot.
+            sway = 7
+            withAnimation(.interpolatingSpring(stiffness: 90, damping: 5.5)) {
                 sway = 0
             }
         }
