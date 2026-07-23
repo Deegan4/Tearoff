@@ -101,7 +101,15 @@ struct ReceiptPrintView: View {
                 .padding(.bottom, 24)
             }
         }
-        .onAppear(perform: startPrinting)
+        // Start the feed only once the paper has been measured. Kicking it off
+        // from onAppear races the background height measurement: on slower
+        // real-device layout the paper is inserted after the animation has
+        // already run, so it appears fully printed with no motion. Gating on
+        // paperHeight guarantees the strip is present before it feeds out.
+        .onAppear { if paperHeight > 0 { startPrinting() } }
+        .onChange(of: paperHeight) { _, height in
+            if height > 0 { startPrinting() }
+        }
     }
 
     // MARK: - Printer housing & feed edge
