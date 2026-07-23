@@ -334,9 +334,10 @@ struct ReceiptPrintView: View {
             withAnimation(.easeOut(duration: 0.15)) { jitter = 0 }
             withAnimation(.easeInOut(duration: 0.2)) { done = true }
             // The freed strip swings once under its own weight and settles —
-            // an underdamped pendulum hinged at the slot.
-            sway = 7
-            withAnimation(.interpolatingSpring(stiffness: 90, damping: 5.5)) {
+            // an underdamped pendulum hinged at the slot. Low `bounce` keeps
+            // the settle weighted and premium rather than springy-toy.
+            sway = 6
+            withAnimation(.interpolatingSpring(duration: 0.9, bounce: 0.22)) {
                 sway = 0
             }
         }

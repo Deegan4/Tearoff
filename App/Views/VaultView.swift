@@ -17,6 +17,7 @@ struct VaultView: View {
     @State private var scanError: String?
     @State private var searchText = ""
     @State private var sort: SortOption = .dateNewest
+    @Namespace private var heroNS
 
     /// The `@Query` fetches everything; search and sort are applied in memory.
     /// A personal receipt vault is small enough that this stays cheap and
@@ -41,10 +42,24 @@ struct VaultView: View {
                             returnWindow: ResolverStore.shared.returnWindow(for: purchase)
                         )
                     }
+                    // Rows ease in as they scroll into view: a restrained lift
+                    // and fade, weighted so it reads premium rather than jumpy.
+                    .scrollTransition(.animated(Motion.premium)) { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0.25)
+                            .scaleEffect(phase.isIdentity ? 1 : 0.94, anchor: .top)
+                            .blur(radius: phase.isIdentity ? 0 : 2)
+                            .offset(y: phase.isIdentity ? 0 : 8)
+                    }
+                    // Hero: the tapped row is the zoom source that the detail
+                    // view morphs out of (and back into on dismiss).
+                    .matchedTransitionSource(id: purchase.id, in: heroNS)
                 }
                 .onDelete(perform: delete)
             }
             .navigationTitle("Vault")
+            // Reorders when the sort changes settle with the house spring.
+            .animation(Motion.premium, value: sort)
             .searchable(text: $searchText, prompt: "Merchant, category, or note")
             .overlay {
                 if purchases.isEmpty {
@@ -93,6 +108,7 @@ struct VaultView: View {
                     ReadingReceiptOverlay()
                 }
             }
+            .animation(Motion.snappy, value: isReadingReceipt)
             .alert("Couldn't read that receipt",
                    isPresented: Binding(get: { scanError != nil }, set: { if !$0 { scanError = nil } })) {
                 Button("OK", role: .cancel) {}
@@ -102,6 +118,7 @@ struct VaultView: View {
         } detail: {
             if let selection {
                 PurchaseDetailView(purchase: selection)
+                    .navigationTransition(.zoom(sourceID: selection.id, in: heroNS))
             } else {
                 ContentUnavailableView("Select a purchase", systemImage: "sidebar.left")
             }
@@ -187,17 +204,59 @@ private enum SortOption: String, CaseIterable, Identifiable {
 private struct ReadingReceiptOverlay: View {
     var body: some View {
         ZStack {
-            Color.black.opacity(0.35).ignoresSafeArea()
-            VStack(spacing: 14) {
-                ProgressView()
-                    .controlSize(.large)
-                    .tint(.white)
+            Color.black.opacity(0.4).ignoresSafeArea()
+            VStack(spacing: 20) {
+                ScanningCard()
                 Text("Reading receipt…")
                     .font(.headline)
                     .foregroundStyle(.white)
             }
             .padding(28)
-            .background(.ultraThinMaterial, in: .rect(cornerRadius: 18))
+            .background(.ultraThinMaterial, in: .rect(cornerRadius: 22))
+        }
+        .transition(.opacity.combined(with: .scale(scale: 1.04)))
+    }
+}
+
+/// A receipt silhouette with a soft light bar sweeping down it, evoking the
+/// OCR pass. The sweep is a continuous phase animation — one lightweight
+/// element, so it stays smooth without touching the row list underneath.
+private struct ScanningCard: View {
+    private let size = CGSize(width: 118, height: 150)
+
+    var body: some View {
+        RoundedRectangle(cornerRadius: 10)
+            .fill(.white.opacity(0.08))
+            .overlay(receiptLines.padding(16))
+            .overlay(scanBeam)
+            .frame(width: size.width, height: size.height)
+            .clipShape(.rect(cornerRadius: 10))
+            .overlay(RoundedRectangle(cornerRadius: 10).strokeBorder(.white.opacity(0.15)))
+    }
+
+    private var receiptLines: some View {
+        VStack(alignment: .leading, spacing: 9) {
+            ForEach(0..<6, id: \.self) { i in
+                Capsule()
+                    .fill(.white.opacity(0.16))
+                    .frame(height: 4)
+                    .padding(.trailing, [0, 34, 12, 40, 0, 22][i])
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var scanBeam: some View {
+        PhaseAnimator([0.0, 1.0]) { t in
+            LinearGradient(
+                colors: [.clear, .white.opacity(0.9), .clear],
+                startPoint: .top, endPoint: .bottom
+            )
+            .frame(height: 24)
+            .blur(radius: 3)
+            .offset(y: -size.height / 2 + t * size.height)
+        } animation: { _ in
+            .easeInOut(duration: 1.25)
         }
     }
 }
