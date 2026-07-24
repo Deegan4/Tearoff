@@ -134,8 +134,11 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
-            .task { WidgetBridge.publish(purchases) }
-            .onChange(of: digestSignature) { WidgetBridge.publish(purchases) }
+            .task { WidgetBridge.publish(purchases); await LiveActivityManager.sync(purchases) }
+            .onChange(of: digestSignature) {
+                WidgetBridge.publish(purchases)
+                Task { @MainActor in await LiveActivityManager.sync(purchases) }
+            }
             // Siri / Shortcuts navigation: an intent set a route; act on it, then clear.
             .onChange(of: router.pendingRoute) { _, route in
                 switch route {

@@ -16,6 +16,7 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: App
+      - path: Shared
     dependencies:
       - package: VaultCore
       - target: TearoffWidgets
@@ -30,6 +31,7 @@ targets:
         CFBundleDisplayName: Tearoff
         NSCameraUsageDescription: Tearoff uses the camera to scan paper receipts so it can log purchases and track return windows.
         NSRemindersFullAccessUsageDescription: Tearoff adds a reminder on your return deadline so you don't miss the window.
+        NSSupportsLiveActivities: true
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
@@ -58,6 +60,7 @@ targets:
     deploymentTarget: "26.0"
     sources:
       - path: TearoffWidgets
+      - path: Shared
     dependencies:
       - package: VaultCore
     entitlements:
