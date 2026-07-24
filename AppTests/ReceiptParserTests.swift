@@ -120,6 +120,49 @@ struct ReceiptParserTests {
         #expect(r.printedWarrantyMonths == nil)
     }
 
+    // MARK: Extra details
+
+    @Test("Extracts subtotal and tax")
+    func subtotalAndTax() {
+        let r = ReceiptParser.parse(["SUBTOTAL 18.50", "TAX 1.49", "TOTAL 19.99"])
+        #expect(r.subtotalCents?.raw == 1850)
+        #expect(r.taxCents?.raw == 149)
+    }
+
+    @Test("Reads a masked card as payment method")
+    func paymentMethodMaskedCard() {
+        let r = ReceiptParser.parse(["VISA ****1234", "TOTAL 19.99"])
+        #expect(r.paymentMethod == "Visa ••••1234")
+    }
+
+    @Test("Reads cash as payment method")
+    func paymentMethodCash() {
+        let r = ReceiptParser.parse(["CASH", "CHANGE 0.01", "TOTAL 19.99"])
+        #expect(r.paymentMethod == "Cash")
+    }
+
+    @Test("Extracts an order/transaction number", arguments: [
+        "Order #A1B2C3", "Transaction: 0092381", "Ref # 55012",
+    ])
+    func orderNumber(text: String) {
+        let r = ReceiptParser.parse([text, "TOTAL 19.99"])
+        #expect(r.orderNumber != nil)
+    }
+
+    @Test("Parses product line items, skipping totals")
+    func lineItems() {
+        let r = ReceiptParser.parse([
+            "Coffee Beans 12.99",
+            "Oat Milk 4.50",
+            "SUBTOTAL 17.49",
+            "TAX 1.40",
+            "TOTAL 18.89",
+        ])
+        #expect(r.lineItems.count == 2)
+        #expect(r.lineItems.first?.name == "Coffee Beans")
+        #expect(r.lineItems.first?.cents == 1299)
+    }
+
     // MARK: Empty input
 
     @Test("Empty input yields no inferred fields")

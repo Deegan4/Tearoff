@@ -16,6 +16,14 @@ struct AddPurchaseView: View {
     @State private var note: String
     @State private var barcode: String
     @State private var scanningBarcode = false
+    @State private var paymentMethod: String
+    @State private var orderNumber: String
+
+    // Captured from the scan (or existing record) and carried onto save. Not
+    // free-text edited here, so held as plain values rather than @State.
+    private let subtotalCents: Cents?
+    private let taxCents: Cents?
+    private let lineItems: [LineItem]
 
     @State private var printedReturnOn: Bool
     @State private var printedReturnDays: Int
@@ -48,6 +56,11 @@ struct AddPurchaseView: View {
         _category = State(initialValue: prefill?.category ?? .other)
         _note = State(initialValue: prefill != nil ? "Scanned receipt" : "")
         _barcode = State(initialValue: "")
+        _paymentMethod = State(initialValue: prefill?.paymentMethod ?? "")
+        _orderNumber = State(initialValue: prefill?.orderNumber ?? "")
+        subtotalCents = prefill?.subtotalCents
+        taxCents = prefill?.taxCents
+        lineItems = prefill?.lineItems ?? []
         // Pre-arm the printed-window toggles when the scan read a term off
         // the slip, so the user confirms rather than re-enters it.
         _printedReturnOn = State(initialValue: prefill?.printedReturnDays != nil)
@@ -71,6 +84,11 @@ struct AddPurchaseView: View {
         _category = State(initialValue: purchase.category)
         _note = State(initialValue: purchase.note)
         _barcode = State(initialValue: purchase.barcode)
+        _paymentMethod = State(initialValue: purchase.paymentMethod)
+        _orderNumber = State(initialValue: purchase.orderNumber)
+        subtotalCents = purchase.subtotalCents
+        taxCents = purchase.taxCents
+        lineItems = purchase.lineItems
         _printedReturnOn = State(initialValue: purchase.printedWindowDays != nil)
         _printedReturnDays = State(initialValue: purchase.printedWindowDays ?? 30)
         _userReturnOn = State(initialValue: purchase.userWindowDays != nil)
@@ -148,6 +166,33 @@ struct AddPurchaseView: View {
                         Text("\(category.displayName) purchases are not tracked for returns.")
                             .font(.caption)
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("Details") {
+                    if let subtotalCents {
+                        LabeledContent("Subtotal", value: subtotalCents.formatted(currencyCode: "USD"))
+                    }
+                    if let taxCents {
+                        LabeledContent("Tax", value: taxCents.formatted(currencyCode: "USD"))
+                    }
+                    TextField("Payment method", text: $paymentMethod)
+                    TextField("Order / transaction #", text: $orderNumber)
+                        .autocorrectionDisabled()
+                        .textInputAutocapitalization(.never)
+                }
+
+                if !lineItems.isEmpty {
+                    Section("Items (\(lineItems.count))") {
+                        ForEach(lineItems, id: \.self) { item in
+                            HStack {
+                                Text(item.name)
+                                Spacer(minLength: 12)
+                                Text(Cents(item.cents).formatted(currencyCode: "USD"))
+                                    .monospacedDigit()
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
                     }
                 }
 
@@ -275,6 +320,13 @@ struct AddPurchaseView: View {
         target.userWindowDays = userReturn
         target.printedWarrantyMonths = printedWarranty
         target.userWarrantyMonths = userWarranty
+
+        // Extra receipt details (both new and edited records).
+        target.paymentMethod = paymentMethod.trimmingCharacters(in: .whitespaces)
+        target.orderNumber = orderNumber.trimmingCharacters(in: .whitespaces)
+        target.subtotalCentsRaw = subtotalCents?.raw ?? 0
+        target.taxCentsRaw = taxCents?.raw ?? 0
+        target.lineItems = lineItems
 
         let id = target.id
         let name = target.merchant

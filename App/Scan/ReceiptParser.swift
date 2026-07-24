@@ -14,6 +14,15 @@ struct ParsedReceipt {
     var printedReturnDays: Int?
     /// A warranty term printed on the slip, e.g. "1 year warranty".
     var printedWarrantyMonths: Int?
+    /// Amount breakdown, when the slip labels them.
+    var subtotalCents: Cents?
+    var taxCents: Cents?
+    /// Tender, e.g. "Visa ••••1234" or "Cash".
+    var paymentMethod: String?
+    /// The order/transaction/receipt number a store asks for on a return.
+    var orderNumber: String?
+    /// Best-effort product lines (name + price in cents).
+    var lineItems: [LineItem]
 }
 
 /// Heuristic receipt parser. Deliberately conservative: it never invents a
@@ -29,8 +38,106 @@ enum ReceiptParser {
             totalCents: total(from: lines),
             category: category(in: hay),
             printedReturnDays: returnDays(in: hay),
-            printedWarrantyMonths: warrantyMonths(in: hay)
+            printedWarrantyMonths: warrantyMonths(in: hay),
+            subtotalCents: labeledAmount("subtotal", in: lines),
+            taxCents: labeledAmount("tax", in: lines, excluding: ["subtotal"]),
+            paymentMethod: paymentMethod(in: lines),
+            orderNumber: orderNumber(in: lines),
+            lineItems: lineItems(in: lines)
         )
+    }
+
+    // MARK: Amount breakdown — a labelled subtotal / tax line.
+
+    private static func labeledAmount(_ keyword: String, in lines: [String], excluding: [String] = []) -> Cents? {
+        for line in lines {
+            let lower = line.lowercased()
+            guard lower.contains(keyword),
+                  !excluding.contains(where: { lower.contains($0) }) else { continue }
+            if let amount = amounts(in: line).last { return Cents(amount) }
+        }
+        return nil
+    }
+
+    // MARK: Payment method — a card brand (+ last four) or cash.
+
+    private static func paymentMethod(in lines: [String]) -> String? {
+        let brands: [(needle: String, label: String)] = [
+            ("american express", "Amex"), ("amex", "Amex"), ("mastercard", "Mastercard"),
+            ("visa", "Visa"), ("discover", "Discover"), ("debit", "Debit"),
+            ("credit", "Credit"), ("cash", "Cash"),
+        ]
+        for line in lines {
+            let lower = line.lowercased()
+            guard let brand = brands.first(where: { lower.contains($0.needle) }) else { continue }
+            if brand.label == "Cash" { return "Cash" }
+            if let last4 = lastFourDigits(in: line) { return "\(brand.label) ••••\(last4)" }
+            return brand.label
+        }
+        return nil
+    }
+
+    /// The card's last four: prefer digits after a mask (`****1234`,
+    /// `ending in 1234`), else a lone trailing 4-digit group.
+    private static func lastFourDigits(in line: String) -> String? {
+        for pattern in [#"(?:\*{2,}|x{2,}|ending(?:\s+in)?\s+)(\d{4})"#, #"(\d{4})(?!\d)"#] {
+            if let group = firstGroup(pattern, in: line) { return group }
+        }
+        return nil
+    }
+
+    // MARK: Order / transaction number.
+
+    private static func orderNumber(in lines: [String]) -> String? {
+        let pattern = #"(?:order|transaction|trans|receipt|invoice|ref|auth)[^0-9A-Za-z]{0,6}#?\s*([0-9A-Za-z][0-9A-Za-z\-]{3,})"#
+        for line in lines {
+            let lower = line.lowercased()
+            guard ["order", "transaction", "trans", "receipt", "invoice", "ref", "auth"]
+                .contains(where: { lower.contains($0) }) else { continue }
+            // Require at least one digit so plain words aren't mistaken for IDs.
+            if let id = firstGroup(pattern, in: line), id.contains(where: \.isNumber) {
+                return id
+            }
+        }
+        return nil
+    }
+
+    // MARK: Line items — a name followed by a trailing price.
+
+    private static func lineItems(in lines: [String]) -> [LineItem] {
+        // Lines that are really labels/totals/tender, not products.
+        let skip = ["total", "subtotal", "tax", "change", "cash", "card", "balance",
+                    "tip", "gratuity", "saving", "discount", "visa", "mastercard",
+                    "amex", "debit", "credit", "order", "transaction", "receipt",
+                    "ref", "invoice", "auth", "points", "reward", "thank", "member"]
+        var items: [LineItem] = []
+        for raw in lines {
+            let line = raw.trimmingCharacters(in: .whitespaces)
+            let lower = line.lowercased()
+            if skip.contains(where: { lower.contains($0) }) { continue }
+            // Must end with a price token.
+            guard let priceRange = line.range(of: #"\d{1,3}(?:,\d{3})*\.\d{2}\s*$"#, options: .regularExpression),
+                  let price = amounts(in: line).last, price > 0 else { continue }
+            var name = String(line[..<priceRange.lowerBound])
+                .trimmingCharacters(in: .whitespaces)
+                .trimmingCharacters(in: CharacterSet(charactersIn: "-*•·. \t"))
+            // Collapse internal whitespace runs.
+            name = name.replacingOccurrences(of: #"\s{2,}"#, with: " ", options: .regularExpression)
+            let letters = name.filter(\.isLetter).count
+            guard letters >= 2, (2...40).contains(name.count) else { continue }
+            items.append(LineItem(name: name, cents: price))
+            if items.count >= 40 { break }
+        }
+        return items
+    }
+
+    /// First capture group of `pattern` as a String (preserves leading zeros).
+    private static func firstGroup(_ pattern: String, in text: String) -> String? {
+        guard let regex = try? NSRegularExpression(pattern: pattern, options: [.caseInsensitive]),
+              let match = regex.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)),
+              match.numberOfRanges > 1,
+              let r = Range(match.range(at: 1), in: text) else { return nil }
+        return String(text[r])
     }
 
     // MARK: Merchant — first line that reads like a name.

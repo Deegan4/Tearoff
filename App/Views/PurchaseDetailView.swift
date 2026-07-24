@@ -46,6 +46,20 @@ struct PurchaseDetailView: View {
                 LabeledContent("Date", value: purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))
                 LabeledContent("Total", value: purchase.totalCents.formatted(currencyCode: "USD"))
                 LabeledContent("Category", value: purchase.category.displayName)
+                if let subtotal = purchase.subtotalCents {
+                    LabeledContent("Subtotal", value: subtotal.formatted(currencyCode: "USD"))
+                }
+                if let tax = purchase.taxCents {
+                    LabeledContent("Tax", value: tax.formatted(currencyCode: "USD"))
+                }
+                if !purchase.paymentMethod.isEmpty {
+                    LabeledContent("Payment", value: purchase.paymentMethod)
+                }
+                if !purchase.orderNumber.isEmpty {
+                    LabeledContent("Order #") {
+                        Text(purchase.orderNumber).font(.callout.monospaced()).textSelection(.enabled)
+                    }
+                }
                 if !purchase.barcode.isEmpty {
                     LabeledContent("Barcode") {
                         Text(purchase.barcode)
@@ -55,6 +69,21 @@ struct PurchaseDetailView: View {
                 }
             }
             .staggeredAppear(0)
+
+            if !purchase.lineItems.isEmpty {
+                Section("Items (\(purchase.lineItems.count))") {
+                    ForEach(purchase.lineItems, id: \.self) { item in
+                        HStack {
+                            Text(item.name)
+                            Spacer(minLength: 12)
+                            Text(Cents(item.cents).formatted(currencyCode: "USD"))
+                                .monospacedDigit()
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .staggeredAppear(1)
+            }
 
             if let window = ResolverStore.shared.returnWindow(for: purchase) {
                 Section("Return window") {

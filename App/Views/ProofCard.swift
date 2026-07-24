@@ -37,6 +37,12 @@ struct ProofCard: View {
                 if let warranty {
                     row("Warranty until", warranty.deadline.formatted(date: .abbreviated, time: .omitted))
                 }
+                if !purchase.paymentMethod.isEmpty {
+                    row("Payment", purchase.paymentMethod)
+                }
+                if !purchase.orderNumber.isEmpty {
+                    row("Order #", purchase.orderNumber)
+                }
                 row("Status", purchase.status.label)
             }
         }

@@ -31,6 +31,14 @@ enum PurchaseStatus: String, Codable, CaseIterable, Identifiable {
     var isResolved: Bool { self != .active }
 }
 
+/// One parsed line off a receipt: a product name and its price in cents.
+/// Stored as JSON on the purchase rather than a SwiftData relationship to
+/// keep the schema flat and CloudKit-friendly.
+struct LineItem: Codable, Hashable {
+    var name: String
+    var cents: Int
+}
+
 /// Persistence record. Deliberately stores primitives rather than VaultCore
 /// value types, so the storage schema and the domain model can evolve
 /// independently. Mapping lives in PurchaseMapping.swift.
@@ -52,6 +60,13 @@ final class StoredPurchase {
     /// Scanned product barcode (UPC/EAN/etc.), empty if none. Handy for
     /// identifying the exact item on a warranty claim.
     var barcode: String = ""
+    /// Extra details lifted off the receipt. Zero/empty means "not captured".
+    var subtotalCentsRaw: Int = 0
+    var taxCentsRaw: Int = 0
+    var paymentMethod: String = ""
+    var orderNumber: String = ""
+    /// Parsed line items, JSON-encoded (see `lineItems`).
+    var lineItemsData: Data?
 
     /// The scanned receipt image, downsampled. Held in external storage so the
     /// SwiftData store stays small; `nil` for manually-entered purchases.
@@ -84,5 +99,16 @@ final class StoredPurchase {
     var status: PurchaseStatus {
         get { PurchaseStatus(rawValue: statusRaw) ?? .active }
         set { statusRaw = newValue.rawValue }
+    }
+
+    var subtotalCents: Cents? { subtotalCentsRaw > 0 ? Cents(subtotalCentsRaw) : nil }
+    var taxCents: Cents? { taxCentsRaw > 0 ? Cents(taxCentsRaw) : nil }
+
+    var lineItems: [LineItem] {
+        get {
+            guard let lineItemsData else { return [] }
+            return (try? JSONDecoder().decode([LineItem].self, from: lineItemsData)) ?? []
+        }
+        set { lineItemsData = newValue.isEmpty ? nil : try? JSONEncoder().encode(newValue) }
     }
 }
