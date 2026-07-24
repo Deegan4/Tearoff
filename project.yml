@@ -1,0 +1,58 @@
+name: Tearoff
+options:
+  bundleIdPrefix: com.tearoff
+  deploymentTarget:
+    iOS: "26.0"
+  createIntermediateGroups: true
+
+packages:
+  VaultCore:
+    path: Packages/VaultCore
+
+targets:
+  Tearoff:
+    type: application
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: App
+    dependencies:
+      - package: VaultCore
+    info:
+      path: App/Info.plist
+      properties:
+        CFBundleDisplayName: Tearoff
+        NSCameraUsageDescription: Tearoff uses the camera to scan paper receipts so it can log purchases and track return windows.
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations~ipad:
+          - UIInterfaceOrientationPortrait
+          - UIInterfaceOrientationLandscapeLeft
+          - UIInterfaceOrientationLandscapeRight
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tearoff.app
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        DEVELOPMENT_TEAM: A6H72TGWNL
+        CODE_SIGN_STYLE: Automatic
+    scheme:
+      testTargets:
+        - TearoffTests
+
+  TearoffTests:
+    type: bundle.unit-test
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: AppTests
+    dependencies:
+      - target: Tearoff
+      - package: VaultCore
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: com.tearoff.app.tests
