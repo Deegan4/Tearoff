@@ -25,6 +25,11 @@ targets:
       properties:
         com.apple.security.application-groups:
           - group.com.tearoff.vault
+        com.apple.developer.icloud-services:
+          - CloudKit
+        com.apple.developer.icloud-container-identifiers:
+          - iCloud.com.tearoff.app
+        aps-environment: development
     info:
       path: App/Info.plist
       properties:
@@ -32,6 +37,8 @@ targets:
         NSCameraUsageDescription: Tearoff uses the camera to scan paper receipts so it can log purchases and track return windows.
         NSRemindersFullAccessUsageDescription: Tearoff adds a reminder on your return deadline so you don't miss the window.
         NSSupportsLiveActivities: true
+        UIBackgroundModes:
+          - remote-notification
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait
