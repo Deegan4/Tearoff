@@ -8,6 +8,7 @@ import VaultCore
 struct AddPurchaseView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(StoreManager.self) private var store
 
     @State private var merchant: String
     @State private var purchaseDate: Date
@@ -18,6 +19,7 @@ struct AddPurchaseView: View {
     @State private var scanningBarcode = false
     @State private var paymentMethod: String
     @State private var orderNumber: String
+    @State private var showingPaywall = false
 
     // Captured from the scan (or existing record) and carried onto save. Not
     // free-text edited here, so held as plain values rather than @State.
@@ -176,7 +178,13 @@ struct AddPurchaseView: View {
 
                 if category.isReturnable {
                     returnSection
-                    warrantySection
+                    // Warranty tracking is a Pro feature; free users see an
+                    // upsell instead of the warranty controls.
+                    if store.isPro {
+                        warrantySection
+                    } else {
+                        warrantyLockedSection
+                    }
                 } else {
                     Section {
                         Text("\(category.displayName) purchases are not tracked for returns.")
@@ -241,6 +249,9 @@ struct AddPurchaseView: View {
                 }
                 .ignoresSafeArea()
             }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(store: store, valueInWindowCents: 0)
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -295,6 +306,27 @@ struct AddPurchaseView: View {
         }
     }
 
+    private var warrantyLockedSection: some View {
+        Section {
+            Button {
+                showingPaywall = true
+            } label: {
+                HStack {
+                    Label("Warranty tracking", systemImage: "lock.fill")
+                    Spacer()
+                    Text("Pro")
+                        .font(.caption2.weight(.semibold))
+                        .padding(.horizontal, 6).padding(.vertical, 2)
+                        .background(.tint.opacity(0.15), in: Capsule())
+                }
+            }
+        } header: {
+            Text("Warranty")
+        } footer: {
+            Text("Track manufacturer warranty deadlines alongside returns with Tearoff Pro.")
+        }
+    }
+
     @ViewBuilder
     private func resolutionFooter(_ resolution: WindowResolution?, emptyText: String) -> some View {
         if let r = resolution {
@@ -332,10 +364,15 @@ struct AddPurchaseView: View {
             context.insert(target)
         }
 
+        // Warranty tracking is Pro-gated: free users never persist a warranty
+        // term or receive warranty alerts, even if a scan pre-armed one.
+        let effectivePrintedWarranty = store.isPro ? printedWarranty : nil
+        let effectiveUserWarranty = store.isPro ? userWarranty : nil
+
         target.printedWindowDays = printedReturn
         target.userWindowDays = userReturn
-        target.printedWarrantyMonths = printedWarranty
-        target.userWarrantyMonths = userWarranty
+        target.printedWarrantyMonths = effectivePrintedWarranty
+        target.userWarrantyMonths = effectiveUserWarranty
 
         // Extra receipt details (both new and edited records).
         target.paymentMethod = paymentMethod.trimmingCharacters(in: .whitespaces)
@@ -363,7 +400,8 @@ struct AddPurchaseView: View {
         let id = target.id
         let name = target.merchant
         let returnWindow = ResolverStore.shared.returnWindow(for: target)
-        let warranty = ResolverStore.shared.warrantyWindow(for: target)
+        // No warranty alerts for free users, including category-default estimates.
+        let warranty = store.isPro ? ResolverStore.shared.warrantyWindow(for: target) : nil
         Task {
             await NotificationScheduler.shared.schedule(
                 purchaseID: id,
