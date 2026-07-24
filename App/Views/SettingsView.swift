@@ -45,6 +45,17 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
+                #if DEBUG
+                Section {
+                    Toggle("Unlock Pro (dev)", isOn: Binding(
+                        get: { store.debugProUnlock },
+                        set: { store.debugProUnlock = $0 }))
+                } header: {
+                    Text("Developer")
+                } footer: {
+                    Text("Dev builds have no purchasable products; this unlocks camera scan, warranty, export, and widgets for testing.")
+                }
+                #endif
                 if !purchases.isEmpty { insightsSection }
                 exportSection
                 Section {

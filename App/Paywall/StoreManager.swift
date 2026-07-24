@@ -20,7 +20,22 @@ final class StoreManager {
     @ObservationIgnored private var updates: Task<Void, Never>?
 
     var tier: ProTier { Entitlement.tier(activeProductIDs: activeProductIDs) }
-    var isPro: Bool { tier.isPro }
+
+    var isPro: Bool {
+        #if DEBUG
+        if debugProUnlock { return true }
+        #endif
+        return tier.isPro
+    }
+
+    #if DEBUG
+    /// Dev builds have no purchasable products (the StoreKit config only loads
+    /// under an Xcode run), so Pro features would be unreachable on device.
+    /// This unlocks them; defaults on. Toggle it in Settings → Developer.
+    var debugProUnlock: Bool = UserDefaults.standard.object(forKey: "tearoff.debugProUnlock") as? Bool ?? true {
+        didSet { UserDefaults.standard.set(debugProUnlock, forKey: "tearoff.debugProUnlock") }
+    }
+    #endif
 
     /// Products sorted for display: monthly, yearly, then lifetime.
     var displayProducts: [Product] {
