@@ -43,6 +43,7 @@ targets:
         GENERATE_INFOPLIST_FILE: NO
         DEVELOPMENT_TEAM: A6H72TGWNL
         CODE_SIGN_STYLE: Automatic
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
     scheme:
       testTargets:
         - TearoffTests
