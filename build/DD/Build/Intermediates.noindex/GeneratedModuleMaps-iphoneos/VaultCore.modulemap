@@ -1,4 +1,0 @@
-module VaultCore {
-header "VaultCore-Swift.h"
-export *
-}

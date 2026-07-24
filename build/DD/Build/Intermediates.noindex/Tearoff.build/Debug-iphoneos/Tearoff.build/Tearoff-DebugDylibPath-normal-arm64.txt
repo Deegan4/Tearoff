@@ -1,1 +1,0 @@
-Tearoff.debug.dylib
