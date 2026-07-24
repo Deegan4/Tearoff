@@ -12,6 +12,7 @@ struct TearoffApp: App {
                 .task { _ = await NotificationScheduler.shared.requestAuthorization() }
                 .task { await store.loadProducts() }
         }
-        .modelContainer(for: StoredPurchase.self)
+        // Shared so App Intents (Siri / Shortcuts) read and write the same store.
+        .modelContainer(SharedModelContainer.shared)
     }
 }
