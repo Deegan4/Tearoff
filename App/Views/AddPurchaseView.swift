@@ -14,6 +14,8 @@ struct AddPurchaseView: View {
     @State private var amountText: String
     @State private var category: PurchaseCategory
     @State private var note: String
+    @State private var barcode: String
+    @State private var scanningBarcode = false
 
     @State private var printedReturnOn: Bool
     @State private var printedReturnDays: Int
@@ -45,6 +47,7 @@ struct AddPurchaseView: View {
         _amountText = State(initialValue: Self.amountString(prefill?.totalCents))
         _category = State(initialValue: prefill?.category ?? .other)
         _note = State(initialValue: prefill != nil ? "Scanned receipt" : "")
+        _barcode = State(initialValue: "")
         // Pre-arm the printed-window toggles when the scan read a term off
         // the slip, so the user confirms rather than re-enters it.
         _printedReturnOn = State(initialValue: prefill?.printedReturnDays != nil)
@@ -67,6 +70,7 @@ struct AddPurchaseView: View {
         _amountText = State(initialValue: Self.amountString(purchase.totalCents))
         _category = State(initialValue: purchase.category)
         _note = State(initialValue: purchase.note)
+        _barcode = State(initialValue: purchase.barcode)
         _printedReturnOn = State(initialValue: purchase.printedWindowDays != nil)
         _printedReturnDays = State(initialValue: purchase.printedWindowDays ?? 30)
         _userReturnOn = State(initialValue: purchase.userWindowDays != nil)
@@ -147,11 +151,35 @@ struct AddPurchaseView: View {
                     }
                 }
 
+                Section("Barcode") {
+                    HStack {
+                        TextField("Product barcode (optional)", text: $barcode)
+                            .autocorrectionDisabled()
+                            .textInputAutocapitalization(.never)
+                        if BarcodeScanner.isAvailable {
+                            Button("Scan barcode", systemImage: "barcode.viewfinder") {
+                                scanningBarcode = true
+                            }
+                            .labelStyle(.iconOnly)
+                            .buttonStyle(.borderless)
+                        }
+                    }
+                }
+
                 Section("Note") {
                     TextField("Optional", text: $note, axis: .vertical)
                 }
             }
             .navigationTitle(title)
+            // A sheet, not a second fullScreenCover, so it never conflicts with
+            // the receipt cover on this same view.
+            .sheet(isPresented: $scanningBarcode) {
+                BarcodeScanner { code in
+                    barcode = code
+                    scanningBarcode = false
+                }
+                .ignoresSafeArea()
+            }
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Cancel") { dismiss() }
@@ -228,6 +256,7 @@ struct AddPurchaseView: View {
             existing.totalCents = cents
             existing.category = category
             existing.note = note
+            existing.barcode = barcode.trimmingCharacters(in: .whitespaces)
             target = existing
         } else {
             target = StoredPurchase(
@@ -238,6 +267,7 @@ struct AddPurchaseView: View {
                 note: note
             )
             target.receiptImageData = receiptImageData
+            target.barcode = barcode.trimmingCharacters(in: .whitespaces)
             context.insert(target)
         }
 

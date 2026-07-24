@@ -46,6 +46,13 @@ struct PurchaseDetailView: View {
                 LabeledContent("Date", value: purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))
                 LabeledContent("Total", value: purchase.totalCents.formatted(currencyCode: "USD"))
                 LabeledContent("Category", value: purchase.category.displayName)
+                if !purchase.barcode.isEmpty {
+                    LabeledContent("Barcode") {
+                        Text(purchase.barcode)
+                            .font(.callout.monospaced())
+                            .textSelection(.enabled)
+                    }
+                }
             }
             .staggeredAppear(0)
 

@@ -49,6 +49,9 @@ final class StoredPurchase {
     /// Lifecycle state. Defaults to active; a default keeps lightweight
     /// migration (and future CloudKit sync) happy.
     var statusRaw: String = PurchaseStatus.active.rawValue
+    /// Scanned product barcode (UPC/EAN/etc.), empty if none. Handy for
+    /// identifying the exact item on a warranty claim.
+    var barcode: String = ""
 
     /// The scanned receipt image, downsampled. Held in external storage so the
     /// SwiftData store stays small; `nil` for manually-entered purchases.

@@ -28,6 +28,9 @@ struct ProofCard: View {
                 row("Date", purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))
                 row("Total", purchase.totalCents.formatted(currencyCode: "USD"))
                 row("Category", purchase.category.displayName)
+                if !purchase.barcode.isEmpty {
+                    row("Barcode", purchase.barcode)
+                }
                 if let returnWindow {
                     row("Return by", returnWindow.deadline.formatted(date: .abbreviated, time: .omitted))
                 }
