@@ -23,7 +23,7 @@ targets:
       path: App/Tearoff.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.tearoff.app
+          - group.com.tearoff.vault
     info:
       path: App/Info.plist
       properties:
@@ -63,7 +63,7 @@ targets:
       path: TearoffWidgets/TearoffWidgets.entitlements
       properties:
         com.apple.security.application-groups:
-          - group.com.tearoff.app
+          - group.com.tearoff.vault
     info:
       path: TearoffWidgets/Info.plist
       properties:

@@ -5,7 +5,7 @@ import Foundation
 /// (reader). Pure Foundation — no WidgetKit or UI — so it lives in VaultCore
 /// and both targets share one implementation.
 public struct SharedDigestStore {
-    public static let appGroupID = "group.com.tearoff.app"
+    public static let appGroupID = "group.com.tearoff.vault"
 
     private let fileURL: URL?
 
