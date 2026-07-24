@@ -3,10 +3,11 @@ import UIKit
 
 /// A plain manual-shutter camera. Unlike VisionKit's document scanner it
 /// never auto-captures — the photo is taken only when the user taps the
-/// shutter. `allowsEditing` lets them crop to the receipt, which recovers
-/// most of the OCR benefit of the scanner's auto-deskew.
+/// shutter. Editing is off so we keep the **full-resolution** capture: the
+/// system's edited/cropped image is downscaled to a few hundred pixels, which
+/// starves OCR, whereas the original is the full sensor photo (~12 MP).
 struct ReceiptCamera: UIViewControllerRepresentable {
-    /// Called with the captured (optionally cropped) image, or nil on cancel.
+    /// Called with the captured image, or nil on cancel.
     var onCapture: (UIImage?) -> Void
 
     static var isAvailable: Bool {
@@ -16,7 +17,10 @@ struct ReceiptCamera: UIViewControllerRepresentable {
     func makeUIViewController(context: Context) -> UIImagePickerController {
         let picker = UIImagePickerController()
         picker.sourceType = .camera
-        picker.allowsEditing = true
+        picker.allowsEditing = false
+        // Highest-quality capture the device offers.
+        picker.cameraCaptureMode = .photo
+        picker.videoQuality = .typeHigh
         picker.delegate = context.coordinator
         return picker
     }
@@ -33,7 +37,8 @@ struct ReceiptCamera: UIViewControllerRepresentable {
             _ picker: UIImagePickerController,
             didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]
         ) {
-            let image = (info[.editedImage] as? UIImage) ?? (info[.originalImage] as? UIImage)
+            // Full-resolution original (editing is disabled).
+            let image = (info[.originalImage] as? UIImage) ?? (info[.editedImage] as? UIImage)
             onCapture(image)
         }
 

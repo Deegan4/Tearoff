@@ -6,7 +6,7 @@ import ImageIO
 /// the blob SwiftData writes to disk. Downsampling goes through ImageIO so a
 /// large capture is never fully decoded into memory at full resolution.
 enum ReceiptImage {
-    static func forStorage(_ image: UIImage, maxPixel: CGFloat = 1400, quality: CGFloat = 0.7) -> Data? {
+    static func forStorage(_ image: UIImage, maxPixel: CGFloat = 2200, quality: CGFloat = 0.75) -> Data? {
         guard let full = image.jpegData(compressionQuality: 1.0) else { return nil }
         return downsample(full, maxPixel: maxPixel, quality: quality)
             // Fall back to a plain re-encode if thumbnailing fails for any reason.
