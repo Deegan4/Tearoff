@@ -31,14 +31,6 @@ enum PurchaseStatus: String, Codable, CaseIterable, Identifiable {
     var isResolved: Bool { self != .active }
 }
 
-/// One parsed line off a receipt: a product name and its price in cents.
-/// Stored as JSON on the purchase rather than a SwiftData relationship to
-/// keep the schema flat and CloudKit-friendly.
-struct LineItem: Codable, Hashable {
-    var name: String
-    var cents: Int
-}
-
 /// Persistence record. Deliberately stores primitives rather than VaultCore
 /// value types, so the storage schema and the domain model can evolve
 /// independently. Mapping lives in PurchaseMapping.swift.

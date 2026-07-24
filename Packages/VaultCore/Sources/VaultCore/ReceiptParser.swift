@@ -1,44 +1,23 @@
 import Foundation
-import VaultCore
-
-/// The fields we try to lift off a receipt. Everything is optional because
-/// OCR is best-effort; the user confirms/corrects on the printed slip.
-struct ParsedReceipt {
-    var merchant: String
-    var date: Date?
-    var totalCents: Cents?
-    /// Inferred from merchant/keywords. `nil` means "no confident guess" —
-    /// the form keeps its default rather than forcing `.other`.
-    var category: PurchaseCategory?
-    /// A return term printed on the slip, e.g. "return within 30 days".
-    var printedReturnDays: Int?
-    /// A warranty term printed on the slip, e.g. "1 year warranty".
-    var printedWarrantyMonths: Int?
-    /// Amount breakdown, when the slip labels them.
-    var subtotalCents: Cents?
-    var taxCents: Cents?
-    /// Tender, e.g. "Visa ••••1234" or "Cash".
-    var paymentMethod: String?
-    /// The order/transaction/receipt number a store asks for on a return.
-    var orderNumber: String?
-    /// Best-effort product lines (name + price in cents).
-    var lineItems: [LineItem]
-}
 
 /// Heuristic receipt parser. Deliberately conservative: it never invents a
 /// value it cannot find in the text. Duration/policy is still resolved by
 /// VaultCore from the merchant + category, not guessed here.
-enum ReceiptParser {
-    static func parse(_ lines: [String]) -> ParsedReceipt {
+public enum ReceiptParser {
+    public static func parse(_ lines: [String]) -> ParsedReceipt {
         // Lowercased full text, reused by the keyword/phrase detectors below.
         let hay = lines.joined(separator: "\n").lowercased()
+        // Return/warranty terms are often spelled out ("one year warranty",
+        // "thirty day returns"). Bridge cardinals to digits so the numeric
+        // detectors below catch them; only used for those two scans.
+        let numericHay = spellOutToDigits(hay)
         return ParsedReceipt(
             merchant: merchant(from: lines),
             date: date(from: lines),
             totalCents: total(from: lines),
             category: category(in: hay),
-            printedReturnDays: returnDays(in: hay),
-            printedWarrantyMonths: warrantyMonths(in: hay),
+            printedReturnDays: returnDays(in: numericHay),
+            printedWarrantyMonths: warrantyMonths(in: numericHay),
             subtotalCents: labeledAmount("subtotal", in: lines),
             taxCents: labeledAmount("tax", in: lines, excluding: ["subtotal"]),
             paymentMethod: paymentMethod(in: lines),
@@ -298,6 +277,28 @@ enum ReceiptParser {
             if let m = firstInt(p, in: hay), (1...120).contains(m) { return m }
         }
         return nil
+    }
+
+    /// Replace standalone spelled-out cardinals (one…twelve, and the common
+    /// return-window tens) with their digits, so "one year warranty" and
+    /// "thirty day returns" reach the numeric detectors. Word-boundaried to
+    /// avoid touching substrings ("oneida", "twentieth").
+    private static func spellOutToDigits(_ text: String) -> String {
+        // Longest words first so "thirty" isn't half-consumed, etc.
+        let words: [(String, String)] = [
+            ("thirty", "30"), ("twenty", "20"), ("fifteen", "15"),
+            ("fourteen", "14"), ("thirteen", "13"), ("twelve", "12"),
+            ("eleven", "11"), ("ninety", "90"), ("sixty", "60"),
+            ("ten", "10"), ("nine", "9"), ("eight", "8"), ("seven", "7"),
+            ("six", "6"), ("five", "5"), ("four", "4"), ("three", "3"),
+            ("two", "2"), ("one", "1"),
+        ]
+        var out = text
+        for (word, digit) in words {
+            out = out.replacingOccurrences(
+                of: "\\b\(word)\\b", with: digit, options: .regularExpression)
+        }
+        return out
     }
 
     /// First capture group of `pattern`, as an Int, over the whole text.
