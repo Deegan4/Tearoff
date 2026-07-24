@@ -27,18 +27,14 @@ struct PurchaseDetailView: View {
     var body: some View {
         Form {
             Section("Status") {
-                Menu {
+                Picker(selection: Binding(get: { purchase.status }, set: { setStatus($0) })) {
                     ForEach(PurchaseStatus.allCases) { option in
-                        Button { setStatus(option) } label: {
-                            Label(option.label, systemImage: option.systemImage)
-                        }
+                        Label(option.label, systemImage: option.systemImage).tag(option)
                     }
                 } label: {
-                    LabeledContent("Status") {
-                        Label(purchase.status.label, systemImage: purchase.status.systemImage)
-                            .foregroundStyle(purchase.status.isResolved ? .secondary : .primary)
-                    }
+                    Text("Status")
                 }
+                .pickerStyle(.menu)
             }
             .staggeredAppear(0)
 
