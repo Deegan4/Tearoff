@@ -17,6 +17,7 @@ struct VaultView: View {
     @State private var scanError: String?
     @State private var searchText = ""
     @State private var sort: SortOption = .dateNewest
+    @State private var showingSettings = false
     @Namespace private var heroNS
 
     /// The `@Query` fetches everything; search and sort are applied in memory.
@@ -91,8 +92,12 @@ struct VaultView: View {
                         }
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Settings", systemImage: "gearshape") { showingSettings = true }
+                }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
+            .sheet(isPresented: $showingSettings) { SettingsView() }
             .fullScreenCover(isPresented: $isScanning) {
                 ReceiptCamera { image in
                     isScanning = false
