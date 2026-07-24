@@ -29,9 +29,23 @@ struct SettingsView: View {
         }
     }
 
+    /// Vault-wide numbers, computed purely in VaultCore.
+    private var insights: InsightsSummary {
+        let inputs = purchases.map { p in
+            InsightsInput(
+                category: p.category.displayName,
+                totalCents: p.totalCents.raw,
+                isActive: !p.status.isResolved,
+                returnDeadline: ResolverStore.shared.returnWindow(for: p)?.deadline,
+                warrantyDeadline: ResolverStore.shared.warrantyWindow(for: p)?.deadline)
+        }
+        return VaultInsights.summary(inputs, now: Date())
+    }
+
     var body: some View {
         NavigationStack {
             Form {
+                if !purchases.isEmpty { insightsSection }
                 exportSection
                 Section {
                     LabeledContent("Scans confirmed", value: "\(ledger.scanCount)")
@@ -80,6 +94,49 @@ struct SettingsView: View {
             }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)
+            }
+        }
+    }
+
+    // MARK: Insights
+
+    @ViewBuilder
+    private var insightsSection: some View {
+        let s = insights
+        Section {
+            LabeledContent("Tracked purchases", value: "\(s.purchaseCount)")
+            LabeledContent("Total tracked", value: Cents(s.totalTrackedCents).formatted(currencyCode: "USD"))
+            LabeledContent("In open return windows") {
+                Text("\(Cents(s.openReturnValueCents).formatted(currencyCode: "USD")) · \(s.openReturnCount) item\(s.openReturnCount == 1 ? "" : "s")")
+                    .foregroundStyle(s.openReturnCount > 0 ? .green : .secondary)
+                    .monospacedDigit()
+            }
+            LabeledContent("Warranties active", value: "\(s.activeWarrantyCount)")
+            if s.warrantiesExpiringSoonCount > 0 {
+                LabeledContent("Expiring within 30 days") {
+                    Text("\(s.warrantiesExpiringSoonCount)").foregroundStyle(.orange)
+                }
+            }
+        } header: {
+            Text("Insights")
+        } footer: {
+            Text("Money still recoverable and coverage still in force, across your whole vault.")
+        }
+
+        if !s.topCategories.isEmpty {
+            Section("Spending by category") {
+                ForEach(s.topCategories) { c in
+                    HStack {
+                        Text(c.category)
+                        Spacer(minLength: 12)
+                        Text(Cents(c.totalCents).formatted(currencyCode: "USD"))
+                            .monospacedDigit()
+                            .foregroundStyle(.secondary)
+                        Text("· \(c.count)")
+                            .font(.caption2)
+                            .foregroundStyle(.tertiary)
+                    }
+                }
             }
         }
     }
