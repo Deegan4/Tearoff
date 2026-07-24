@@ -18,6 +18,12 @@ targets:
       - path: App
     dependencies:
       - package: VaultCore
+      - target: TearoffWidgets
+    entitlements:
+      path: App/Tearoff.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.tearoff.app
     info:
       path: App/Info.plist
       properties:
@@ -43,6 +49,36 @@ targets:
       # Local StoreKit testing: the scheme runs against this config so the
       # paywall works in the simulator without App Store Connect.
       storeKitConfiguration: Tearoff.storekit
+
+  TearoffWidgets:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "26.0"
+    sources:
+      - path: TearoffWidgets
+    dependencies:
+      - package: VaultCore
+    entitlements:
+      path: TearoffWidgets/TearoffWidgets.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.tearoff.app
+    info:
+      path: TearoffWidgets/Info.plist
+      properties:
+        CFBundleDisplayName: Tearoff
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.tearoff.app.widgets
+        SWIFT_VERSION: "6.0"
+        SWIFT_STRICT_CONCURRENCY: complete
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: NO
+        DEVELOPMENT_TEAM: A6H72TGWNL
+        CODE_SIGN_STYLE: Automatic
+        SKIP_INSTALL: YES
 
   TearoffTests:
     type: bundle.unit-test
