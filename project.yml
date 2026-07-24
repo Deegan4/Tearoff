@@ -29,6 +29,7 @@ targets:
       properties:
         CFBundleDisplayName: Tearoff
         NSCameraUsageDescription: Tearoff uses the camera to scan paper receipts so it can log purchases and track return windows.
+        NSRemindersFullAccessUsageDescription: Tearoff adds a reminder on your return deadline so you don't miss the window.
         UILaunchScreen: {}
         UISupportedInterfaceOrientations~ipad:
           - UIInterfaceOrientationPortrait

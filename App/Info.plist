@@ -22,6 +22,8 @@
 	<string>1</string>
 	<key>NSCameraUsageDescription</key>
 	<string>Tearoff uses the camera to scan paper receipts so it can log purchases and track return windows.</string>
+	<key>NSRemindersFullAccessUsageDescription</key>
+	<string>Tearoff adds a reminder on your return deadline so you don't miss the window.</string>
 	<key>UILaunchScreen</key>
 	<dict/>
 	<key>UISupportedInterfaceOrientations~ipad</key>

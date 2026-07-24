@@ -10,6 +10,7 @@ struct PurchaseDetailView: View {
     let purchase: StoredPurchase
     @State private var isEditing = false
     @State private var confirmDelete = false
+    @State private var actionMessage: String?
     @State private var proof: Image?
     @Environment(\.displayScale) private var displayScale
     // A single cover slot: presenting two `.fullScreenCover` modifiers on one
@@ -105,6 +106,8 @@ struct PurchaseDetailView: View {
                 .staggeredAppear(1)
             }
 
+            returnActionsSection
+
             if let warranty = ResolverStore.shared.warrantyWindow(for: purchase) {
                 Section("Warranty") {
                     LabeledContent("Covered until", value: warranty.deadline.formatted(date: .abbreviated, time: .omitted))
@@ -187,6 +190,56 @@ struct PurchaseDetailView: View {
             Button("Cancel", role: .cancel) {}
         } message: {
             Text("This removes the record and cancels its alerts.")
+        }
+        .alert("Return", isPresented: Binding(get: { actionMessage != nil }, set: { if !$0 { actionMessage = nil } })) {
+            Button("OK", role: .cancel) {}
+        } message: {
+            Text(actionMessage ?? "")
+        }
+    }
+
+    /// One-tap actions for an open return window: jump to the retailer's returns
+    /// page, copy the order number a clerk will ask for, or set a Reminder for
+    /// the deadline. Shown only while the window is still open and unresolved.
+    @ViewBuilder
+    private var returnActionsSection: some View {
+        if !purchase.status.isResolved,
+           let window = ResolverStore.shared.returnWindow(for: purchase),
+           window.deadline >= Calendar.current.startOfDay(for: .now) {
+            Section("Start your return") {
+                if let url = RetailerLinks.returnsURL(forMerchant: purchase.merchant) {
+                    Link(destination: url) {
+                        Label(
+                            RetailerLinks.isKnown(purchase.merchant)
+                                ? "Open \(purchase.merchant) returns page"
+                                : "Search the return policy",
+                            systemImage: "arrow.up.forward.app")
+                    }
+                }
+                if !purchase.orderNumber.isEmpty {
+                    Button {
+                        UIPasteboard.general.string = purchase.orderNumber
+                        actionMessage = "Order number copied to the clipboard."
+                    } label: {
+                        Label("Copy order number", systemImage: "doc.on.doc")
+                    }
+                }
+                Button {
+                    let merchant = purchase.merchant
+                    let deadline = window.deadline
+                    Task {
+                        let outcome = await ReturnReminder.add(merchant: merchant, deadline: deadline)
+                        actionMessage = switch outcome {
+                        case .added: "Reminder set for \(deadline.formatted(date: .abbreviated, time: .omitted))."
+                        case .denied: "Reminders access is off — turn it on in Settings to set one."
+                        case .failed: "Couldn't create the reminder."
+                        }
+                    }
+                } label: {
+                    Label("Remind me to return", systemImage: "bell.badge")
+                }
+            }
+            .staggeredAppear(2)
         }
     }
 
