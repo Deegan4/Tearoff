@@ -1,0 +1,139 @@
+{
+  "" : {
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/VaultCore-primary.dia",
+    "emit-module-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/VaultCore-primary-emit-module.d",
+    "emit-module-diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/VaultCore-primary-emit-module.dia",
+    "pch" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/VaultCore-primary-Bridging-header.pch",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/VaultCore-primary.swiftdeps"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/Category.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Category~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/Entitlement.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Entitlement~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/ExtractionTelemetry.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ExtractionTelemetry~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/Money.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Money~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/PolicyResolver.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyResolver~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/PolicyRule.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyRule~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/PolicyTable.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/PolicyTable~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/Provenance.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Provenance~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/Receipt.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Receipt~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/ReceiptParser.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/ReceiptParser~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/Resolution.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/Resolution~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/Packages/VaultCore/Sources/VaultCore/WarrantyResolver.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/WarrantyResolver~partial.swiftmodule"
+  },
+  "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/DerivedSources/resource_bundle_accessor.swift" : {
+    "const-values" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.swiftconstvalues",
+    "dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.d",
+    "diagnostics" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.dia",
+    "index-unit-output-path" : "/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "llvm-bc" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.bc",
+    "object" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.o",
+    "swift-dependencies" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor.swiftdeps",
+    "swiftmodule" : "/Volumes/SAMSUNG 1TB/Tearoff/build/DD/Build/Intermediates.noindex/VaultCore.build/Debug-iphoneos/VaultCore.build/Objects-normal/arm64/resource_bundle_accessor~partial.swiftmodule"
+  }
+}

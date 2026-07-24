@@ -1,21 +1,38 @@
 import SwiftUI
+import SwiftData
 import VaultCore
 
-/// Settings, currently home to the on-device scan-accuracy dashboard. The
-/// numbers are aggregated locally from every confirmed scan — how often the
-/// scanner got each field right before the user touched it — so accuracy
-/// improvement is a measured loop, not guesswork.
+/// Settings: the on-device scan-accuracy dashboard and vault export. The
+/// accuracy numbers are aggregated locally from every confirmed scan — how
+/// often the scanner got each field right before the user touched it — so
+/// accuracy improvement is a measured loop, not guesswork.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(StoreManager.self) private var store
+    @Query private var purchases: [StoredPurchase]
     // Observed so the dashboard reflects new scans live.
     private var telemetry = ExtractionTelemetryStore.shared
     @State private var confirmingReset = false
+    @State private var exportedFile: ExportedFile?
+    @State private var showingPaywall = false
 
     private var ledger: AccuracyLedger { telemetry.ledger }
+
+    /// Value of purchases still inside an open return window — the paywall pitch.
+    private var valueInOpenReturnWindowCents: Int {
+        let today = Date()
+        return purchases.reduce(0) { sum, p in
+            guard !p.status.isResolved,
+                  let w = ResolverStore.shared.returnWindow(for: p),
+                  w.deadline >= today else { return sum }
+            return sum + p.totalCents.raw
+        }
+    }
 
     var body: some View {
         NavigationStack {
             Form {
+                exportSection
                 Section {
                     LabeledContent("Scans confirmed", value: "\(ledger.scanCount)")
                     LabeledContent("Overall accuracy") {
@@ -58,6 +75,47 @@ struct SettingsView: View {
                 }
             }
             .confirmObliterate($confirmingReset) { telemetry.reset() }
+            .sheet(item: $exportedFile) { file in
+                ShareSheet(items: [file.url])
+            }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)
+            }
+        }
+    }
+
+    // MARK: Export (Pro)
+
+    @ViewBuilder
+    private var exportSection: some View {
+        Section {
+            if store.isPro {
+                Button {
+                    exportedFile = VaultExporter.writeCSV(purchases).map(ExportedFile.init)
+                } label: {
+                    Label("Export vault (CSV)", systemImage: "square.and.arrow.up")
+                }
+                .disabled(purchases.isEmpty)
+            } else {
+                Button {
+                    showingPaywall = true
+                } label: {
+                    HStack {
+                        Label("Export vault", systemImage: "square.and.arrow.up")
+                        Spacer()
+                        Text("Pro")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(.tint.opacity(0.15), in: Capsule())
+                    }
+                }
+            }
+        } header: {
+            Text("Export")
+        } footer: {
+            Text(store.isPro
+                 ? "Save your whole vault as a CSV — every purchase with its resolved return and warranty deadlines."
+                 : "Exporting your vault as a CSV is a Pro feature.")
         }
     }
 
