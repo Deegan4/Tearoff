@@ -1,9 +1,0 @@
-Target dependency graph (4 targets)
-Target 'Tearoff' in project 'Tearoff'
-➜ Explicit dependency on target 'VaultCore' in project 'VaultCore'
-Target 'VaultCore' in project 'VaultCore'
-➜ Explicit dependency on target 'VaultCore' in project 'VaultCore'
-➜ Explicit dependency on target 'VaultCore_VaultCore' in project 'VaultCore'
-Target 'VaultCore' in project 'VaultCore'
-➜ Explicit dependency on target 'VaultCore_VaultCore' in project 'VaultCore'
-Target 'VaultCore_VaultCore' in project 'VaultCore' (no dependencies)
