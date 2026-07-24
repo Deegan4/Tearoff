@@ -1,0 +1,99 @@
+{
+  "identifier" : "4F1C2E10-0001-4A00-9000-000000000001",
+  "nonRenewingSubscriptions" : [
+
+  ],
+  "products" : [
+    {
+      "displayPrice" : "39.99",
+      "familyShareable" : true,
+      "internalID" : "4F1C2E10-0002-4A00-9000-000000000002",
+      "localizations" : [
+        {
+          "description" : "Tearoff Pro, permanently. Family Sharing enabled.",
+          "displayName" : "Tearoff Pro — Lifetime",
+          "locale" : "en_US"
+        }
+      ],
+      "productID" : "com.tearoff.pro.lifetime",
+      "referenceName" : "Pro Lifetime",
+      "type" : "NonConsumable"
+    }
+  ],
+  "settings" : {
+    "_applicationInternalID" : "0000000000",
+    "_developerTeamID" : "0000000000",
+    "_failTransactionsEnabled" : false,
+    "_lastSynchronizedDate" : 0,
+    "_locale" : "en_US",
+    "_storefront" : "USA",
+    "_storeKitErrors" : [
+
+    ]
+  },
+  "subscriptionGroups" : [
+    {
+      "id" : "4F1C2E10-0003-4A00-9000-000000000003",
+      "localizations" : [
+
+      ],
+      "name" : "Tearoff Pro",
+      "subscriptions" : [
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "2.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "4F1C2E10-0004-4A00-9000-000000000004",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Camera + AI receipt extraction, warranty tracking, export, and widgets.",
+              "displayName" : "Tearoff Pro — Monthly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.tearoff.pro.monthly",
+          "recurringSubscriptionPeriod" : "P1M",
+          "referenceName" : "Pro Monthly",
+          "subscriptionGroupID" : "4F1C2E10-0003-4A00-9000-000000000003",
+          "type" : "RecurringSubscription"
+        },
+        {
+          "adHocOffers" : [
+
+          ],
+          "codeOffers" : [
+
+          ],
+          "displayPrice" : "14.99",
+          "familyShareable" : false,
+          "groupNumber" : 1,
+          "internalID" : "4F1C2E10-0005-4A00-9000-000000000005",
+          "introductoryOffer" : null,
+          "localizations" : [
+            {
+              "description" : "Camera + AI receipt extraction, warranty tracking, export, and widgets. Best value.",
+              "displayName" : "Tearoff Pro — Yearly",
+              "locale" : "en_US"
+            }
+          ],
+          "productID" : "com.tearoff.pro.yearly",
+          "recurringSubscriptionPeriod" : "P1Y",
+          "referenceName" : "Pro Yearly",
+          "subscriptionGroupID" : "4F1C2E10-0003-4A00-9000-000000000003",
+          "type" : "RecurringSubscription"
+        }
+      ]
+    }
+  ],
+  "version" : {
+    "major" : 3,
+    "minor" : 0
+  }
+}

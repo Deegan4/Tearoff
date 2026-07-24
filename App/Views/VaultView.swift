@@ -5,6 +5,7 @@ import VaultCore
 
 struct VaultView: View {
     @Environment(\.modelContext) private var context
+    @Environment(StoreManager.self) private var store
 
     @Query(sort: \StoredPurchase.purchaseDate, order: .reverse)
     private var purchases: [StoredPurchase]
@@ -17,7 +18,21 @@ struct VaultView: View {
     @State private var scanError: String?
     @State private var searchText = ""
     @State private var sort: SortOption = .dateNewest
+    @State private var showingSettings = false
+    @State private var showingPaywall = false
     @Namespace private var heroNS
+
+    /// Value of purchases still inside an open return window — the paywall's
+    /// insurance-shaped pitch (spec §7). Active status, deadline not yet past.
+    private var valueInOpenReturnWindowCents: Int {
+        let today = Date()
+        return purchases.reduce(0) { sum, purchase in
+            guard !purchase.status.isResolved,
+                  let window = ResolverStore.shared.returnWindow(for: purchase),
+                  window.deadline >= today else { return sum }
+            return sum + purchase.totalCents.raw
+        }
+    }
 
     /// The `@Query` fetches everything; search and sort are applied in memory.
     /// A personal receipt vault is small enough that this stays cheap and
@@ -76,7 +91,11 @@ struct VaultView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if ReceiptCamera.isAvailable {
-                        Button("Scan", systemImage: "camera") { isScanning = true }
+                        // Camera scan is a Pro feature; free users get the
+                        // paywall instead of the camera.
+                        Button("Scan", systemImage: "camera") {
+                            if store.isPro { isScanning = true } else { showingPaywall = true }
+                        }
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -91,8 +110,15 @@ struct VaultView: View {
                         }
                     }
                 }
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button("Settings", systemImage: "gearshape") { showingSettings = true }
+                }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
+            .sheet(isPresented: $showingSettings) { SettingsView() }
+            .sheet(isPresented: $showingPaywall) {
+                PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)
+            }
             .fullScreenCover(isPresented: $isScanning) {
                 ReceiptCamera { image in
                     isScanning = false

@@ -41,6 +41,9 @@ struct AddPurchaseView: View {
     private let fromScan: Bool
     /// Set only on the scan path; carried onto the new record at save time.
     private let receiptImageData: Data?
+    /// What the scanner produced, snapshotted at prefill so the save path can
+    /// diff it against the user's confirmed values for accuracy telemetry.
+    private let scanParsed: ExtractionSnapshot?
 
     // MARK: Init
 
@@ -50,6 +53,18 @@ struct AddPurchaseView: View {
         editing = nil
         fromScan = prefill != nil
         self.receiptImageData = receiptImageData
+        scanParsed = prefill.map { p in
+            ExtractionSnapshot(
+                merchant: p.merchant,
+                date: p.date,
+                totalCents: p.totalCents,
+                category: p.category,
+                returnDays: p.printedReturnDays,
+                warrantyMonths: p.printedWarrantyMonths,
+                paymentMethod: p.paymentMethod,
+                orderNumber: p.orderNumber
+            )
+        }
         _merchant = State(initialValue: prefill?.merchant ?? "")
         _purchaseDate = State(initialValue: prefill?.date ?? Date())
         _amountText = State(initialValue: Self.amountString(prefill?.totalCents))
@@ -78,6 +93,7 @@ struct AddPurchaseView: View {
         editing = purchase
         fromScan = false
         receiptImageData = nil   // editing preserves the record's existing image
+        scanParsed = nil         // telemetry only measures the scan → confirm path
         _merchant = State(initialValue: purchase.merchant)
         _purchaseDate = State(initialValue: purchase.purchaseDate)
         _amountText = State(initialValue: Self.amountString(purchase.totalCents))
@@ -327,6 +343,22 @@ struct AddPurchaseView: View {
         target.subtotalCentsRaw = subtotalCents?.raw ?? 0
         target.taxCentsRaw = taxCents?.raw ?? 0
         target.lineItems = lineItems
+
+        // Record how much of the scan the user had to correct (scan path only,
+        // counts only — see ExtractionTelemetryStore).
+        if let scanParsed {
+            let confirmed = ExtractionSnapshot(
+                merchant: target.merchant,
+                date: target.purchaseDate,
+                totalCents: cents,
+                category: target.category,
+                returnDays: printedReturn,
+                warrantyMonths: printedWarranty,
+                paymentMethod: target.paymentMethod,
+                orderNumber: target.orderNumber
+            )
+            ExtractionTelemetryStore.shared.record(parsed: scanParsed, saved: confirmed)
+        }
 
         let id = target.id
         let name = target.merchant

@@ -40,6 +40,9 @@ targets:
     scheme:
       testTargets:
         - TearoffTests
+      # Local StoreKit testing: the scheme runs against this config so the
+      # paywall works in the simulator without App Store Connect.
+      storeKitConfiguration: Tearoff.storekit
 
   TearoffTests:
     type: bundle.unit-test
