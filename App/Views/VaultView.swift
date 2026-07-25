@@ -6,6 +6,7 @@ import VaultCore
 struct VaultView: View {
     @Environment(\.modelContext) private var context
     @Environment(StoreManager.self) private var store
+    @Environment(\.scenePhase) private var scenePhase
 
     @Query(sort: \StoredPurchase.purchaseDate, order: .reverse)
     private var purchases: [StoredPurchase]
@@ -135,7 +136,12 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
-            .task { WidgetBridge.publish(purchases); await LiveActivityManager.sync(purchases) }
+            .task { drainPendingReturns(); WidgetBridge.publish(purchases); await LiveActivityManager.sync(purchases) }
+            // A widget "Mark returned" tap only queues the change; apply it when
+            // the app comes forward so SwiftData and the alerts stay in sync.
+            .onChange(of: scenePhase) { _, phase in
+                if phase == .active { drainPendingReturns() }
+            }
             .onChange(of: digestSignature) {
                 WidgetBridge.publish(purchases)
                 Task { @MainActor in await LiveActivityManager.sync(purchases) }
@@ -211,6 +217,25 @@ struct VaultView: View {
             parsed: ReceiptParser.parse(lines),
             imageData: ReceiptImage.forStorage(image)
         )
+    }
+
+    /// Apply any "Mark returned" taps the widget queued while the app wasn't
+    /// running: flip each purchase to `.returned`, cancel its alerts, then clear
+    /// the queue. Mutating `statusRaw` moves `digestSignature`, which republishes
+    /// the widget digest from the true model — reconciling the intent's
+    /// optimistic write.
+    private func drainPendingReturns() {
+        let queue = PendingReturnStore()
+        let ids = queue.pending()
+        guard !ids.isEmpty else { return }
+        let wanted = Set(ids.compactMap { UUID(uuidString: $0) })
+        for purchase in purchases where wanted.contains(purchase.id) && !purchase.status.isResolved {
+            purchase.status = .returned
+            let id = purchase.id
+            Task { await NotificationScheduler.shared.cancel(purchaseID: id) }
+        }
+        // Clear only what we saw, so a tap that lands mid-drain isn't dropped.
+        queue.remove(ids)
     }
 
     /// Delete swiped rows: cancel their pending alerts, drop the detail

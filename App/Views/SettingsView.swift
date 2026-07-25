@@ -15,6 +15,8 @@ struct SettingsView: View {
     @State private var confirmingReset = false
     @State private var exportedFile: ExportedFile?
     @State private var showingPaywall = false
+    /// Same key the app root reads, so the choice applies immediately.
+    @AppStorage(AppearanceMode.storageKey) private var appearance: AppearanceMode = .system
 
     private var ledger: AccuracyLedger { telemetry.ledger }
 
@@ -40,6 +42,7 @@ struct SettingsView: View {
                     Text("Dev builds have no purchasable products; this unlocks camera scan, warranty, export, and widgets for testing.")
                 }
                 #endif
+                appearanceSection
                 if !purchases.isEmpty { insightsSection }
                 exportSection
                 Section {
@@ -90,6 +93,24 @@ struct SettingsView: View {
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)
             }
+        }
+    }
+
+    // MARK: Appearance
+
+    @ViewBuilder
+    private var appearanceSection: some View {
+        Section {
+            Picker("Appearance", selection: $appearance) {
+                ForEach(AppearanceMode.allCases) { mode in
+                    Text(mode.label).tag(mode)
+                }
+            }
+            .pickerStyle(.segmented)
+        } header: {
+            Text("Appearance")
+        } footer: {
+            Text("System follows your device's Light/Dark setting.")
         }
     }
 
