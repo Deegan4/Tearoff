@@ -60,13 +60,28 @@ struct DeadlinesWidgetView: View {
     }
 
     var body: some View {
-        if rows.isEmpty {
+        if entry.digest.isLocked {
+            lockedState
+        } else if rows.isEmpty {
             emptyState
         } else if family == .systemSmall {
             small
         } else {
             medium
         }
+    }
+
+    private var lockedState: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Label("Tearoff", systemImage: "lock.fill")
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.tint)
+            Spacer()
+            Text("Widgets are a Pro feature")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+        }
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
     private var emptyState: some View {

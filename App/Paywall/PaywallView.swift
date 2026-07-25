@@ -134,6 +134,13 @@ struct PaywallView: View {
             Button("Restore Purchases") { Task { await store.restore() } }
                 .font(.footnote)
                 .disabled(store.isWorking)
+            // Guideline 3.1.2(a): the subscription purchase screen itself must
+            // link to both documents, not just the app's Settings/metadata.
+            HStack(spacing: 16) {
+                Link("Privacy Policy", destination: URL(string: "https://deegan4.github.io/Tearoff/privacy.html")!)
+                Link("Terms of Use", destination: URL(string: "https://www.apple.com/legal/internet-services/itunes/dev/stdeula/")!)
+            }
+            .font(.caption)
             Text("Free forever: manual receipts, expiry alerts, and your full vault. Pro sells time saved, never access to your own records.")
                 .font(.caption2)
                 .foregroundStyle(.secondary)

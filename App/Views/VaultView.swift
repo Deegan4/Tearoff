@@ -136,15 +136,18 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
-            .task { drainPendingReturns(); WidgetBridge.publish(purchases); await LiveActivityManager.sync(purchases) }
+            .task { drainPendingReturns(); WidgetBridge.publish(purchases, isPro: store.isPro); await LiveActivityManager.sync(purchases) }
             // A widget "Mark returned" tap only queues the change; apply it when
             // the app comes forward so SwiftData and the alerts stay in sync.
             .onChange(of: scenePhase) { _, phase in
                 if phase == .active { drainPendingReturns() }
             }
             .onChange(of: digestSignature) {
-                WidgetBridge.publish(purchases)
+                WidgetBridge.publish(purchases, isPro: store.isPro)
                 Task { @MainActor in await LiveActivityManager.sync(purchases) }
+            }
+            .onChange(of: store.isPro) {
+                WidgetBridge.publish(purchases, isPro: store.isPro)
             }
             // Siri / Shortcuts navigation: an intent set a route; act on it, then clear.
             .onChange(of: router.pendingRoute) { _, route in

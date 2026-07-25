@@ -54,10 +54,15 @@ public struct UpcomingDeadline: Codable, Equatable, Sendable, Identifiable {
 public struct DeadlineDigest: Codable, Equatable, Sendable {
     public var generatedAt: Date
     public var deadlines: [UpcomingDeadline]
+    /// True when the publishing user is on the free tier. Widgets are a Pro
+    /// feature (spec §7); a locked digest carries no deadline data at all, so
+    /// the widget extension shows an upsell instead of real content.
+    public var isLocked: Bool
 
-    public init(generatedAt: Date, deadlines: [UpcomingDeadline]) {
+    public init(generatedAt: Date, deadlines: [UpcomingDeadline], isLocked: Bool = false) {
         self.generatedAt = generatedAt
         self.deadlines = deadlines
+        self.isLocked = isLocked
     }
 
     /// Filename/key used for the shared container payload.
@@ -77,6 +82,12 @@ public struct DeadlineDigest: Codable, Equatable, Sendable {
             .sorted { $0.deadline < $1.deadline }
             .prefix(limit)
         return DeadlineDigest(generatedAt: now, deadlines: Array(upcoming))
+    }
+
+    /// The digest published for a free-tier user: no deadline data, flagged
+    /// as locked so the widget renders an upsell rather than an empty state.
+    public static func locked(now: Date) -> DeadlineDigest {
+        DeadlineDigest(generatedAt: now, deadlines: [], isLocked: true)
     }
 
     /// Whole days from `now` to `deadline` (day-normalized). Negative if past.

@@ -11,7 +11,15 @@ enum WidgetBridge {
 
     /// Flatten active purchases into their resolved, still-open return and
     /// warranty deadlines, build the digest, persist, and reload timelines.
-    static func publish(_ purchases: [StoredPurchase]) {
+    /// Widgets are Pro-gated (spec §7): a free user publishes a locked digest
+    /// carrying no deadline data, so nothing leaks to the Home Screen widget
+    /// before purchase.
+    static func publish(_ purchases: [StoredPurchase], isPro: Bool) {
+        guard isPro else {
+            store.write(.locked(now: Date()))
+            WidgetCenter.shared.reloadAllTimelines()
+            return
+        }
         var deadlines: [UpcomingDeadline] = []
         for p in purchases where !p.status.isResolved {
             if let r = ResolverStore.shared.returnWindow(for: p) {
