@@ -22,6 +22,23 @@ struct VaultView: View {
     @State private var showingPaywall = false
     @Namespace private var heroNS
 
+    /// A cheap change-signature over the fields that affect the widget digest,
+    /// so we republish only when a deadline could actually have changed.
+    private var digestSignature: Int {
+        var hasher = Hasher()
+        for p in purchases {
+            hasher.combine(p.id)
+            hasher.combine(p.purchaseDate)
+            hasher.combine(p.statusRaw)
+            hasher.combine(p.categoryRaw)
+            hasher.combine(p.printedWindowDays)
+            hasher.combine(p.userWindowDays)
+            hasher.combine(p.printedWarrantyMonths)
+            hasher.combine(p.userWarrantyMonths)
+        }
+        return hasher.finalize()
+    }
+
     /// Value of purchases still inside an open return window — the paywall's
     /// insurance-shaped pitch (spec §7). Active status, deadline not yet past.
     private var valueInOpenReturnWindowCents: Int {
@@ -115,6 +132,8 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
+            .task { WidgetBridge.publish(purchases) }
+            .onChange(of: digestSignature) { WidgetBridge.publish(purchases) }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)

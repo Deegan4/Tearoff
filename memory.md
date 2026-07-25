@@ -1,67 +1,70 @@
-# Project Memory — iPrint
+# Project Memory — Tearoff
 
-Working notes and decisions for the iPrint app. Kept as a durable record so
-future sessions can pick up context quickly.
+Durable record of what Tearoff is and the decisions behind it, so future
+sessions pick up context fast. For build/test/convention mechanics see
+`CLAUDE.md`.
 
-## What iPrint is
+## What Tearoff is
 
-An Expo SDK 56 / React Native app that previews, edits, and "prints"
-receipts. Single screen (`App.tsx`), no navigation library. Money is stored
-in cents throughout; all totals/formatting live in `src/utils/format.ts`.
+A native **iOS 26 SwiftUI + SwiftData** app. Scan a paper receipt → Tearoff
+tracks its **return** and **warranty** deadlines and alerts before they close,
+then produces proof-of-purchase on demand. This fully replaced the earlier
+Expo/React Native "iPrint" prototype (that scope — a phone-as-thermal-printer
+tool — was abandoned; do not resurrect it).
 
-## Current state
+The product's moat is **trust machinery**, not AI: honest provenance, an
+append-only retailer-policy table, a returnable/consumable gate that keeps the
+vault from becoming a junk drawer, and honest "I don't know" states. AI
+(on-device Vision OCR + Foundation Models) only fills fields the user then
+confirms — it never decides a policy.
 
-- **Scaffolded** the project from scratch (repo started with only a README):
-  Expo config, strict TypeScript, babel/reanimated, entry point.
-- **Receipt model + preview** — `src/types.ts`, `src/components/Receipt.tsx`,
-  seed data in `src/data.ts`.
-- **Editing + persistence** — `src/state/receiptReducer.ts` (add/remove/update,
-  values normalized to non-negative integer cents), `src/components/ItemEditor.tsx`,
-  and `src/utils/storage.ts` (AsyncStorage; hydrate-then-persist guarded by a
-  `hydratedRef` so the seed can't clobber saved data).
-- **Real printing** — `src/utils/receiptHtml.ts` builds 80mm-roll HTML (escaped),
-  `src/utils/print.ts` opens the OS print dialog via `expo-print` and shares a
-  PDF via `expo-sharing` (branches on `Platform.OS` for web).
-- **Animated printer** — `src/components/PrinterOverlay.tsx`: a Reanimated
-  overlay where the receipt feeds out of a slot at the top of the screen
-  (paper translates from `-paperHeight` to `0` behind a clip at the slot line;
-  bezel drawn on top), with a stepped `feedEasing` worklet, blinking LED, scan
-  bar, and an SVG zigzag torn edge. "Tear off" slides the paper away.
+## Architecture (see CLAUDE.md for detail)
 
-Sole check: `npx tsc --noEmit` (no test/lint/CI configured).
+- **`Packages/VaultCore/`** — pure Foundation domain logic, `swift test`-able,
+  no UI/IO imports (enforced by `ModuleBoundaryTests`).
+- **`App/`** — SwiftUI/SwiftData shell, camera/OCR, notifications, StoreKit,
+  paywall, views. `ResolverStore.shared` bridges the two.
 
-## Running it
+## Current state (as of 2026-07-24)
 
-- **Web is the only target runnable in a headless/sandbox env** —
-  `scripts/run-web.sh` starts Expo web; drive with a headless browser.
-- **Expo Go is NOT possible from the sandbox.** The container's egress is
-  proxy-only; `expo start --tunnel` fails because the ngrok agent endpoint
-  (`connect.ngrok-agent.com`) is blocked at the proxy (TLS handshake failure),
-  so no phone can reach a dev server started here. Run `npx expo start` from a
-  normal machine (laptop on same Wi-Fi, or `--tunnel`) to use Expo Go.
-- **Live web build (shareable, any browser/device):**
-  https://claude.ai/code/artifact/55df2116-ba42-4cae-8ab5-1c28d0157a60
-  (static export inlined into one HTML; refresh by re-exporting and
-  republishing to the same URL).
+Shipped to `main` and installed on a physical iPhone 15 ("iCrackU"):
 
-## Product framing
+- **P0a** — VaultCore engine (Cents, categories+gate, append-only PolicyTable +
+  PolicyResolver, WarrantyResolver, provenance/WindowResolution) and the app
+  shell: vault split view, manual entry, edit/delete, camera scan → Vision OCR
+  → confirm → print, auto-filled category/windows, line items, subtotal/tax,
+  payment, order #, barcode scan, return lifecycle, proof-of-purchase share,
+  expiry notifications, search/sort, premium motion.
+- **P0b** — golden receipt regression corpus (parser moved into VaultCore);
+  on-device extraction-correction telemetry + Settings accuracy dashboard
+  (counts-only); StoreKit Pro tiers + vault-computed paywall (camera scan
+  gated).
+- **P0c** — CSV/JSON vault export (RFC-4180 safe), Pro-gated; warranty tracking
+  Pro-gated (free users get an upsell, no warranty term/alerts persisted).
 
-The credible wedge: **turn a phone into a receipt printer for small/mobile
-sellers (markets, food trucks, tradespeople, pop-ups) who don't want a POS
-system.** Value = a correct, itemized, printable/shareable receipt in seconds.
-Today it's a polished prototype, not yet a sharp solution.
+Verification bar held throughout: VaultCore `swift test` green (62 tests),
+app builds for simulator and signed device.
 
-## Open decisions / next steps
+## Pricing / tiers (spec §7)
 
-- **Native iOS (SwiftUI) vs stay on Expo** — native wins if the priority is
-  Bluetooth/MFi thermal (ESC/POS) hardware printing and iOS-only; Expo wins for
-  iOS+Android+web reach. Undecided (pending: target platforms + printer type).
-- To become a real tool, needs: Bluetooth ESC/POS thermal printing, multiple
-  receipts + history, and business identity (logo, tax ID, paid status).
-- The printer-feed animation is delight/demo value, not the core problem-solver.
+- Free — manual receipts, expiry alerts, full vault (permanently useful).
+- Pro — $2.99/mo or $14.99/yr: camera + AI extraction, warranty tracking,
+  export, widgets.
+- Lifetime — $39.99 one-time, Family Sharing.
+- Paywall is insurance-shaped: pitch computed from the user's own vault
+  ("$X still inside a return window") and AI copy branches on
+  `SystemLanguageModel.default.availability`.
 
-## Repo / branch notes
+## Known gaps / next
 
-- Feature work lives on `claude/print-receipt-setup-cmxpqz` (draft PR #1 into
-  `main`). This `memory.md` was committed directly to `main` at the user's
-  explicit request.
+- **Widgets** — advertised on the paywall; being built now (Home Screen
+  upcoming return/warranty deadlines).
+- **App Store Connect products** — not created yet, so on-device the paywall
+  shows no prices (local `.storekit` only applies to Xcode-run sessions). Needs
+  the three IAPs created in ASC with IDs matching `TearoffProduct`.
+- Warranty/export enforcement is done; widget enforcement lands with the widget.
+
+## Longer-term (out of scope now)
+
+Merchant SaaS (P2+): zero-PII QR receipt issuance sold per location — the real
+business; consumer IAP funds the runway.
