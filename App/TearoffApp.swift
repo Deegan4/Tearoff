@@ -6,6 +6,7 @@ struct TearoffApp: App {
     @State private var store = StoreManager()
     /// User's appearance choice; drives the whole window's color scheme.
     @AppStorage(AppearanceMode.storageKey) private var appearance: AppearanceMode = .system
+    @AppStorage(OnboardingView.storageKey) private var hasCompletedOnboarding = false
 
     var body: some Scene {
         WindowGroup {
@@ -18,6 +19,10 @@ struct TearoffApp: App {
                     #if DEBUG
                     MockData.seedIfNeeded(SharedModelContainer.shared.mainContext)
                     #endif
+                }
+                .fullScreenCover(isPresented: .constant(!hasCompletedOnboarding)) {
+                    OnboardingView()
+                        .preferredColorScheme(appearance.colorScheme)
                 }
         }
         // Shared so App Intents (Siri / Shortcuts) read and write the same store.
