@@ -14,6 +14,7 @@ Run:
   python3 scripts/asc-setup-iap.py check     # verify app exists + list current IAPs + prices
   python3 scripts/asc-setup-iap.py create    # create sub group + 3 products
   python3 scripts/asc-setup-iap.py price     # set USD prices on all 3 products
+  python3 scripts/asc-setup-iap.py meta      # fill listing copy, IAP/sub localizations, category
 
 Product IDs match VaultCore's TearoffProduct exactly:
   com.tearoff.pro.monthly   ($2.99/mo  auto-renewable)
@@ -47,6 +48,57 @@ PRICES_USD = {
     "com.tearoff.pro.lifetime": "39.99",
 }
 USA = "USA"  # App Store territory id for the United States.
+EN = "en-US"
+
+# ---- listing copy (en-US) -------------------------------------------------
+# App Store field limits: subtitle 30, keywords 100, promo 170, IAP/sub name 30,
+# IAP/sub description 45, app description 4000. Kept within them below.
+PRIMARY_CATEGORY = "UTILITIES"
+SUPPORT_URL = "https://github.com/Deegan4/Tearoff/issues"
+# GitHub renders this Markdown at a public, reachable URL (resolves once the
+# PRIVACY.md on `main` is merged).
+PRIVACY_URL = "https://github.com/Deegan4/Tearoff/blob/main/PRIVACY.md"
+
+SUBTITLE = "Never miss a return window"
+KEYWORDS = "receipt,return,warranty,refund,deadline,reminder,tracker,expense,scanner,purchases"
+PROMO_TEXT = ("Scan a receipt and Tearoff tracks its return and warranty "
+              "deadlines, then reminds you before they close. Your data stays "
+              "on your device and your private iCloud.")
+DESCRIPTION = (
+    "Tearoff turns a paper receipt into a deadline you won't miss.\n\n"
+    "Every purchase has a clock on it — a return window that closes, a warranty "
+    "that expires. Tearoff tracks both and reminds you before they run out, so "
+    "you never eat the cost of a missed return or a lapsed warranty again.\n\n"
+    "HOW IT WORKS\n"
+    "- Add a purchase or scan its receipt.\n"
+    "- Tearoff works out the return and warranty windows and shows exactly "
+    "where each date came from — printed on the receipt, a store policy, or an "
+    "estimate — so you always know how much to trust it.\n"
+    "- You get a reminder before each deadline, and a Home Screen widget that "
+    "keeps the next ones in view.\n\n"
+    "PRIVATE BY DESIGN\n"
+    "Your receipts stay on your device and sync only through your own private "
+    "iCloud. No accounts, no ads, no tracking, and nothing sent to us.\n\n"
+    "FREE\n"
+    "- Add receipts by hand\n"
+    "- Return-deadline reminders\n"
+    "- Your full receipt vault\n\n"
+    "TEAROFF PRO\n"
+    "- Scan receipts with the camera and let Tearoff read them for you\n"
+    "- Warranty tracking\n"
+    "- Export your vault\n"
+    "- Home Screen widgets\n\n"
+    "Pro is available monthly, yearly, or as a one-time lifetime purchase.")
+
+# Subscription group display name shown to users at purchase.
+GROUP_DISPLAY_NAME = "Tearoff Pro"
+# (productId, display name <=30, description <=45)
+SUB_LOCALIZATION = [
+    ("com.tearoff.pro.monthly", "Tearoff Pro Monthly", "All Pro features, billed monthly."),
+    ("com.tearoff.pro.yearly",  "Tearoff Pro Yearly",  "All Pro features, billed yearly."),
+]
+LIFETIME_NAME = "Tearoff Pro Lifetime"
+LIFETIME_DESC = "All Pro features, one-time purchase."
 
 
 def _key():
@@ -272,6 +324,107 @@ def set_prices(app_id):
         print(f"  {npid} not found — run `create` first")
 
 
+# ---- listing metadata -----------------------------------------------------
+
+def upsert_localization(kind, list_path, rel_name, parent_type, parent_id, locale, attrs):
+    """Create or update one localization row. Looks it up by locale in
+    `list_path`; PATCHes if it exists, else POSTs with the parent relationship.
+    `kind` is the resource type (also its /v1 collection path)."""
+    sep = "&" if "?" in list_path else "?"
+    st, resp = call("GET", f"{list_path}{sep}limit=200")
+    existing = None
+    if st == 200:
+        existing = next((x for x in resp.get("data", [])
+                         if x["attributes"].get("locale") == locale), None)
+    if existing:
+        body = {"data": {"type": kind, "id": existing["id"], "attributes": attrs}}
+        st, r = call("PATCH", f"/v1/{kind}/{existing['id']}", body)
+        verb = "updated"
+    else:
+        a = dict(attrs); a["locale"] = locale
+        body = {"data": {"type": kind, "attributes": a,
+                         "relationships": {rel_name: {"data": {"type": parent_type, "id": parent_id}}}}}
+        st, r = call("POST", f"/v1/{kind}", body)
+        verb = "created"
+    if st in (200, 201):
+        print(f"  {verb} {kind} [{locale}]")
+        return True
+    print(f"  ERROR {kind} [{locale}]:", st, errs(r))
+    return False
+
+
+def set_category(app_id):
+    st, infos = call("GET", f"/v1/apps/{app_id}/appInfos")
+    for inf in infos.get("data", []):
+        if inf["attributes"].get("state") != "PREPARE_FOR_SUBMISSION":
+            continue
+        body = {"data": {"type": "appInfos", "id": inf["id"], "relationships": {
+            "primaryCategory": {"data": {"type": "appCategories", "id": PRIMARY_CATEGORY}}}}}
+        st, r = call("PATCH", f"/v1/appInfos/{inf['id']}", body)
+        print(f"  category {PRIMARY_CATEGORY}:",
+              "set" if st in (200, 201) else errs(r))
+
+
+def set_meta(app_id):
+    # Subscription group display name.
+    st, groups = call("GET", f"/v1/apps/{app_id}/subscriptionGroups?limit=200")
+    for g in groups.get("data", []):
+        if g["attributes"].get("referenceName") == GROUP_NAME:
+            upsert_localization(
+                "subscriptionGroupLocalizations",
+                f"/v1/subscriptionGroups/{g['id']}/subscriptionGroupLocalizations",
+                "subscriptionGroup", "subscriptionGroups", g["id"], EN,
+                {"name": GROUP_DISPLAY_NAME})
+
+    # Per-subscription name + description.
+    subs = subscriptions(app_id)
+    for pid, disp, desc in SUB_LOCALIZATION:
+        if pid in subs:
+            upsert_localization(
+                "subscriptionLocalizations",
+                f"/v1/subscriptions/{subs[pid]}/subscriptionLocalizations",
+                "subscription", "subscriptions", subs[pid], EN,
+                {"name": disp, "description": desc})
+        else:
+            print(f"  {pid} not found — run `create` first")
+
+    # Non-consumable name + description.
+    ncs = nonconsumables(app_id)
+    lid = ncs.get(NONCONSUMABLE[0])
+    if lid:
+        upsert_localization(
+            "inAppPurchaseLocalizations",
+            f"/v2/inAppPurchases/{lid}/inAppPurchaseLocalizations",
+            "inAppPurchaseV2", "inAppPurchases", lid, EN,
+            {"name": LIFETIME_NAME, "description": LIFETIME_DESC})
+    else:
+        print(f"  {NONCONSUMABLE[0]} not found — run `create` first")
+
+    # App version listing: description, keywords, promo, support URL.
+    st, vers = call("GET", f"/v1/apps/{app_id}/appStoreVersions?limit=1")
+    if vers.get("data"):
+        vid = vers["data"][0]["id"]
+        upsert_localization(
+            "appStoreVersionLocalizations",
+            f"/v1/appStoreVersions/{vid}/appStoreVersionLocalizations",
+            "appStoreVersion", "appStoreVersions", vid, EN,
+            {"description": DESCRIPTION, "keywords": KEYWORDS,
+             "supportUrl": SUPPORT_URL, "promotionalText": PROMO_TEXT})
+
+    # App info: subtitle + privacy policy URL (name already set).
+    st, infos = call("GET", f"/v1/apps/{app_id}/appInfos")
+    for inf in infos.get("data", []):
+        if inf["attributes"].get("state") != "PREPARE_FOR_SUBMISSION":
+            continue
+        upsert_localization(
+            "appInfoLocalizations",
+            f"/v1/appInfos/{inf['id']}/appInfoLocalizations",
+            "appInfo", "appInfos", inf["id"], EN,
+            {"subtitle": SUBTITLE, "privacyPolicyUrl": PRIVACY_URL})
+
+    set_category(app_id)
+
+
 def main():
     cmd = sys.argv[1] if len(sys.argv) > 1 else "check"
     app_id, app_name = find_app()
@@ -302,9 +455,14 @@ def main():
         return
     if cmd == "price":
         set_prices(app_id)
-        print("Done. Verify with `check`; finish localizations + review info in App Store Connect.")
+        print("Done. Verify with `check`.")
         return
-    print(f"Unknown command '{cmd}'. Use: check | create | price")
+    if cmd == "meta":
+        set_meta(app_id)
+        print("Done. Verify with `check`. Still manual in ASC: screenshots, "
+              "age rating, and the App Privacy (data collection) questions.")
+        return
+    print(f"Unknown command '{cmd}'. Use: check | create | price | meta")
 
 
 if __name__ == "__main__":
