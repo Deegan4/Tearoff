@@ -308,7 +308,7 @@ private struct ReceiptImageViewer: View {
                     // Double-tap toggles between fit and 2×, and gives an
                     // always-available way back to fit when zoomed in.
                     .onTapGesture(count: 2) {
-                        withAnimation(.spring) {
+                        withAnimation(Motion.snappy) {
                             zoom = zoom > 1 ? 1 : 2
                             committed = zoom
                         }

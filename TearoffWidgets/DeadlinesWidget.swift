@@ -98,6 +98,7 @@ struct DeadlinesWidgetView: View {
                     Text(countdown(days))
                         .font(.title3.weight(.semibold))
                         .foregroundStyle(color(for: days))
+                        .contentTransition(.numericText())
                     Text(d.deadline.formatted(date: .abbreviated, time: .omitted))
                         .font(.caption2)
                         .foregroundStyle(.secondary)
@@ -134,6 +135,7 @@ struct DeadlinesWidgetView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(color(for: days))
                         .monospacedDigit()
+                        .contentTransition(.numericText())
                     if d.kind == .returnWindow, let pid = d.purchaseID {
                         markReturnedButton(pid, label: "Mark \(d.merchant) returned")
                             .font(.callout)
