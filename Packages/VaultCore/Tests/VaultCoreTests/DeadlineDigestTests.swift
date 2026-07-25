@@ -49,6 +49,22 @@ func codable() throws {
     #expect(decoded == digest)
 }
 
+@Test("makeID round-trips through purchaseID")
+func idRoundTrips() {
+    let uuid = UUID(uuidString: "1BE2A4C0-0000-4000-8000-000000000001")!
+    let ret = UpcomingDeadline.makeID(purchaseID: uuid, kind: .returnWindow)
+    let war = UpcomingDeadline.makeID(purchaseID: uuid, kind: .warranty)
+    #expect(ret != war)
+    #expect(deadline(ret, day(2026, 1, 1)).purchaseID == uuid.uuidString)
+    #expect(deadline(war, day(2026, 1, 1)).purchaseID == uuid.uuidString)
+}
+
+@Test("purchaseID is nil for ids that don't follow the convention")
+func purchaseIDRejectsGarbage() {
+    #expect(deadline("not-a-uuid|returnWindow", day(2026, 1, 1)).purchaseID == nil)
+    #expect(deadline("s1", day(2026, 1, 1)).purchaseID == nil)
+}
+
 // Deterministic shuffle so the sort test isn't trivially pre-ordered, without
 // needing Date/Random (unavailable in this test env's constraints anyway).
 private extension Array {

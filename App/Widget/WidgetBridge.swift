@@ -16,7 +16,7 @@ enum WidgetBridge {
         for p in purchases where !p.status.isResolved {
             if let r = ResolverStore.shared.returnWindow(for: p) {
                 deadlines.append(UpcomingDeadline(
-                    id: "\(p.id.uuidString)-return",
+                    id: UpcomingDeadline.makeID(purchaseID: p.id, kind: .returnWindow),
                     merchant: p.merchant,
                     kind: .returnWindow,
                     deadline: r.deadline,
@@ -25,7 +25,7 @@ enum WidgetBridge {
             }
             if let w = ResolverStore.shared.warrantyWindow(for: p) {
                 deadlines.append(UpcomingDeadline(
-                    id: "\(p.id.uuidString)-warranty",
+                    id: UpcomingDeadline.makeID(purchaseID: p.id, kind: .warranty),
                     merchant: p.merchant,
                     kind: .warranty,
                     deadline: w.deadline,
