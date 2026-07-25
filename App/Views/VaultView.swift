@@ -42,15 +42,9 @@ struct VaultView: View {
     }
 
     /// Value of purchases still inside an open return window — the paywall's
-    /// insurance-shaped pitch (spec §7). Active status, deadline not yet past.
+    /// insurance-shaped pitch (spec §7). Computed once in VaultCore.
     private var valueInOpenReturnWindowCents: Int {
-        let today = Date()
-        return purchases.reduce(0) { sum, purchase in
-            guard !purchase.status.isResolved,
-                  let window = ResolverStore.shared.returnWindow(for: purchase),
-                  window.deadline >= today else { return sum }
-            return sum + purchase.totalCents.raw
-        }
+        ResolverStore.shared.insights(for: purchases).openReturnValueCents
     }
 
     /// The `@Query` fetches everything; search and sort are applied in memory.
@@ -79,6 +73,13 @@ struct VaultView: View {
                     // Hero: the tapped row is the zoom source that the detail
                     // view morphs out of (and back into on dismiss).
                     .matchedTransitionSource(id: purchase.id, in: heroNS)
+                    // Rows settle in as they enter the viewport — the correct
+                    // list idiom (a onAppear stagger re-fires on cell reuse).
+                    .scrollTransition { content, phase in
+                        content
+                            .opacity(phase.isIdentity ? 1 : 0.35)
+                            .scaleEffect(phase.isIdentity ? 1 : 0.96)
+                    }
                 }
                 .onDelete(perform: delete)
             }

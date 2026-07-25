@@ -34,4 +34,20 @@ final class ResolverStore {
             userMonths: purchase.userWarrantyMonths
         )
     }
+
+    /// Vault-wide insights (totals, open-return value, active warranties) for a
+    /// set of stored purchases, resolved through the bundled tables. The single
+    /// place that maps persistence records into VaultCore's pure `InsightsInput`,
+    /// so views never re-implement it.
+    func insights(for purchases: [StoredPurchase], now: Date = Date()) -> InsightsSummary {
+        let inputs = purchases.map { p in
+            InsightsInput(
+                category: p.category.displayName,
+                totalCents: p.totalCents.raw,
+                isActive: !p.status.isResolved,
+                returnDeadline: returnWindow(for: p)?.deadline,
+                warrantyDeadline: warrantyWindow(for: p)?.deadline)
+        }
+        return VaultInsights.summary(inputs, now: now)
+    }
 }

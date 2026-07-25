@@ -94,9 +94,10 @@ struct ReceiptPrintView: View {
                         .frame(maxWidth: .infinity)
                         .padding(.vertical, 14)
                 }
-                .buttonStyle(PressableButtonStyle())
-                .background(.tint, in: .rect(cornerRadius: 14))
-                .foregroundStyle(.white)
+                // iOS 26 Liquid Glass: a see-through, tinted glass button that
+                // refracts the paper behind it instead of a flat blue fill.
+                .buttonStyle(.glass)
+                .tint(.blue)
                 .disabled(!done)
                 .opacity(done ? 1 : 0.5)
                 .padding(.horizontal, 32)
@@ -210,6 +211,10 @@ struct ReceiptPrintView: View {
                     .fill(.white)
                     .shadow(color: .black.opacity(0.18), radius: 6, x: 0, y: 4)
             )
+            // The slip is always white thermal paper, so its text must stay dark
+            // even in dark mode — otherwise .primary/.secondary invert to white
+            // and the values vanish. Pin the printed content to light.
+            .environment(\.colorScheme, .light)
     }
 
     /// Hidden, natural-size render used only to measure the paper's height.
@@ -427,14 +432,5 @@ private struct Barcode: View {
                 i += 1
             }
         }
-    }
-}
-
-/// pressto-style press feedback: the control scales down while held.
-private struct PressableButtonStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .scaleEffect(configuration.isPressed ? 0.96 : 1)
-            .animation(.spring(response: 0.25, dampingFraction: 0.6), value: configuration.isPressed)
     }
 }

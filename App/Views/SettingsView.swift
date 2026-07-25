@@ -18,29 +18,13 @@ struct SettingsView: View {
 
     private var ledger: AccuracyLedger { telemetry.ledger }
 
-    /// Value of purchases still inside an open return window — the paywall pitch.
-    private var valueInOpenReturnWindowCents: Int {
-        let today = Date()
-        return purchases.reduce(0) { sum, p in
-            guard !p.status.isResolved,
-                  let w = ResolverStore.shared.returnWindow(for: p),
-                  w.deadline >= today else { return sum }
-            return sum + p.totalCents.raw
-        }
+    /// Vault-wide numbers, resolved once in VaultCore via the shared bridge.
+    private var insights: InsightsSummary {
+        ResolverStore.shared.insights(for: purchases)
     }
 
-    /// Vault-wide numbers, computed purely in VaultCore.
-    private var insights: InsightsSummary {
-        let inputs = purchases.map { p in
-            InsightsInput(
-                category: p.category.displayName,
-                totalCents: p.totalCents.raw,
-                isActive: !p.status.isResolved,
-                returnDeadline: ResolverStore.shared.returnWindow(for: p)?.deadline,
-                warrantyDeadline: ResolverStore.shared.warrantyWindow(for: p)?.deadline)
-        }
-        return VaultInsights.summary(inputs, now: Date())
-    }
+    /// Value of purchases still inside an open return window — the paywall pitch.
+    private var valueInOpenReturnWindowCents: Int { insights.openReturnValueCents }
 
     var body: some View {
         NavigationStack {

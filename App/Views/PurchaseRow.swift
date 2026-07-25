@@ -37,6 +37,8 @@ struct PurchaseRow: View {
                          : "Return window closed — \(window.provenance.explanation)")
                         .font(.caption)
                         .foregroundStyle(days < 0 ? Color.secondary : (urgent ? .red : .secondary))
+                        // The day count rolls when it ticks down across midnight.
+                        .contentTransition(.numericText())
                 }
             } else {
                 Text(purchase.category.isReturnable
