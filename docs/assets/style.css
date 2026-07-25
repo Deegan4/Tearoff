@@ -1,0 +1,166 @@
+/* Tearoff — shared site styles. Brand colors sampled from the app icon. */
+
+:root {
+  --teal-1: #2e8b8b;
+  --teal-2: #1c6e6e;
+  --gold: #f4b740;
+  --ink: #16232a;
+  --ink-soft: #4b5b62;
+  --paper: #fdfefe;
+  --paper-line: #e4e9ea;
+  --max-width: 720px;
+}
+
+* { box-sizing: border-box; }
+
+html { color-scheme: light dark; }
+
+body {
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: var(--ink);
+  background: var(--paper);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: var(--teal-2); text-decoration-thickness: 1.5px; text-underline-offset: 2px; }
+a:hover { color: var(--teal-1); }
+
+.wrap {
+  max-width: var(--max-width);
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Hero: gradient banner matching the app icon, torn paper edge at the base */
+.hero {
+  background: linear-gradient(160deg, var(--teal-1), var(--teal-2));
+  color: #fff;
+  padding: 56px 0 40px;
+  position: relative;
+}
+
+.hero .wrap { display: flex; flex-direction: column; align-items: center; text-align: center; gap: 14px; }
+
+.hero img.icon {
+  width: 88px;
+  height: 88px;
+  border-radius: 22px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+}
+
+.hero h1 { font-size: clamp(28px, 5vw, 38px); margin: 4px 0 0; font-weight: 800; letter-spacing: -0.02em; }
+.hero p.tagline { margin: 0; font-size: 17px; color: rgba(255, 255, 255, 0.92); max-width: 42ch; }
+
+.hero nav { margin-top: 8px; display: flex; gap: 20px; font-size: 15px; }
+.hero nav a { color: #fff; opacity: 0.9; }
+.hero nav a:hover { opacity: 1; }
+
+/* Torn perforated edge, echoing the receipt-tear print view */
+.torn-edge {
+  height: 16px;
+  background:
+    linear-gradient(135deg, var(--paper) 50%, transparent 50%),
+    linear-gradient(-135deg, var(--paper) 50%, transparent 50%);
+  background-size: 16px 16px;
+  background-position: bottom;
+  background-repeat: repeat-x;
+}
+
+main { padding: 40px 0 64px; }
+
+h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 40px 0 12px;
+  letter-spacing: -0.01em;
+}
+h2:first-child { margin-top: 0; }
+
+h3 { font-size: 17px; font-weight: 700; margin: 24px 0 6px; }
+
+p { margin: 0 0 14px; color: var(--ink-soft); }
+main p, main li { color: var(--ink-soft); }
+
+ul { margin: 0 0 14px; padding-left: 22px; }
+li { margin-bottom: 6px; }
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 16px;
+  margin: 24px 0 8px;
+}
+
+.card {
+  border: 1px solid var(--paper-line);
+  border-radius: 16px;
+  padding: 18px;
+  background: var(--paper);
+}
+
+.card .glyph { font-size: 26px; margin-bottom: 8px; display: block; }
+.card h3 { margin: 0 0 4px; font-size: 15.5px; }
+.card p { margin: 0; font-size: 14px; }
+
+.badge {
+  display: inline-block;
+  background: color-mix(in srgb, var(--gold) 22%, transparent);
+  color: #8a5c05;
+  font-size: 12px;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  margin-bottom: 14px;
+}
+
+.cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--teal-2);
+  color: #fff !important;
+  font-weight: 700;
+  padding: 12px 20px;
+  border-radius: 12px;
+  text-decoration: none;
+  margin-top: 6px;
+}
+.cta:hover { background: var(--teal-1); }
+
+.updated {
+  color: var(--ink-soft);
+  font-size: 13px;
+  font-style: italic;
+  margin-bottom: 28px;
+}
+
+footer {
+  border-top: 1px solid var(--paper-line);
+  padding: 28px 0 48px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+footer a { color: var(--ink-soft); }
+footer .links { margin-bottom: 8px; }
+footer .links a { margin: 0 10px; }
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --ink: #f2f5f6;
+    --ink-soft: #b7c2c6;
+    --paper: #10181b;
+    --paper-line: #26343a;
+  }
+  .torn-edge {
+    background:
+      linear-gradient(135deg, var(--paper) 50%, transparent 50%),
+      linear-gradient(-135deg, var(--paper) 50%, transparent 50%);
+    background-size: 16px 16px;
+    background-position: bottom;
+    background-repeat: repeat-x;
+  }
+  .badge { color: #ffd27a; }
+}
