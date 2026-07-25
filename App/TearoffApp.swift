@@ -4,11 +4,14 @@ import SwiftData
 @main
 struct TearoffApp: App {
     @State private var store = StoreManager()
+    /// User's appearance choice; drives the whole window's color scheme.
+    @AppStorage(AppearanceMode.storageKey) private var appearance: AppearanceMode = .system
 
     var body: some Scene {
         WindowGroup {
             VaultView()
                 .environment(store)
+                .preferredColorScheme(appearance.colorScheme)
                 .task { _ = await NotificationScheduler.shared.requestAuthorization() }
                 .task { await store.loadProducts() }
                 .task {
