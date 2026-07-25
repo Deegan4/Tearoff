@@ -20,6 +20,8 @@ struct VaultView: View {
     @State private var sort: SortOption = .dateNewest
     @State private var showingSettings = false
     @State private var showingPaywall = false
+    /// Observed so Siri / Shortcuts intents can drive navigation.
+    private let router = IntentRouter.shared
     @Namespace private var heroNS
 
     /// A cheap change-signature over the fields that affect the widget digest,
@@ -132,8 +134,20 @@ struct VaultView: View {
                 }
             }
             .sheet(isPresented: $isAdding) { AddPurchaseView() }
-            .task { WidgetBridge.publish(purchases) }
-            .onChange(of: digestSignature) { WidgetBridge.publish(purchases) }
+            .task { WidgetBridge.publish(purchases); await LiveActivityManager.sync(purchases) }
+            .onChange(of: digestSignature) {
+                WidgetBridge.publish(purchases)
+                Task { @MainActor in await LiveActivityManager.sync(purchases) }
+            }
+            // Siri / Shortcuts navigation: an intent set a route; act on it, then clear.
+            .onChange(of: router.pendingRoute) { _, route in
+                switch route {
+                case .add: isAdding = true
+                case .scan: if store.isPro { isScanning = true } else { showingPaywall = true }
+                case nil: break
+                }
+                if route != nil { router.pendingRoute = nil }
+            }
             .sheet(isPresented: $showingSettings) { SettingsView() }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)

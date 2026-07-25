@@ -5,5 +5,6 @@ import SwiftUI
 struct TearoffWidgetBundle: WidgetBundle {
     var body: some Widget {
         DeadlinesWidget()
+        ReturnLiveActivity()
     }
 }

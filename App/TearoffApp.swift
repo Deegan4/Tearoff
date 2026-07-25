@@ -11,7 +11,13 @@ struct TearoffApp: App {
                 .environment(store)
                 .task { _ = await NotificationScheduler.shared.requestAuthorization() }
                 .task { await store.loadProducts() }
+                .task {
+                    #if DEBUG
+                    MockData.seedIfNeeded(SharedModelContainer.shared.mainContext)
+                    #endif
+                }
         }
-        .modelContainer(for: StoredPurchase.self)
+        // Shared so App Intents (Siri / Shortcuts) read and write the same store.
+        .modelContainer(SharedModelContainer.shared)
     }
 }
