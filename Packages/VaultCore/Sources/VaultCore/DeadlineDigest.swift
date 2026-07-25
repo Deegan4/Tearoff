@@ -32,6 +32,21 @@ public struct UpcomingDeadline: Codable, Equatable, Sendable, Identifiable {
         self.deadline = deadline
         self.isEstimate = isEstimate
     }
+
+    /// Canonical row identity: the purchase's UUID and the deadline kind, joined
+    /// by a separator that can't occur inside a UUID string so `purchaseID` can
+    /// recover the purchase later (e.g. from a widget "Mark returned" tap).
+    public static func makeID(purchaseID: UUID, kind: DeadlineKind) -> String {
+        "\(purchaseID.uuidString)|\(kind.rawValue)"
+    }
+
+    /// The originating purchase's UUID string, parsed back out of `id`, or nil
+    /// if the id doesn't follow the `makeID` convention.
+    public var purchaseID: String? {
+        guard let raw = id.split(separator: "|", maxSplits: 1).first,
+              UUID(uuidString: String(raw)) != nil else { return nil }
+        return String(raw)
+    }
 }
 
 /// The published snapshot the widget renders. Carries a generation timestamp so

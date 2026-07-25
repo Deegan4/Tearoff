@@ -93,12 +93,22 @@ struct DeadlinesWidgetView: View {
                 .font(.headline)
                 .lineLimit(1)
             Spacer()
-            Text(countdown(days))
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(color(for: days))
-            Text(d.deadline.formatted(date: .abbreviated, time: .omitted))
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+            HStack(alignment: .bottom) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(countdown(days))
+                        .font(.title3.weight(.semibold))
+                        .foregroundStyle(color(for: days))
+                    Text(d.deadline.formatted(date: .abbreviated, time: .omitted))
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                // Only return windows can be "returned"; warranties can't.
+                if d.kind == .returnWindow, let pid = d.purchaseID {
+                    Spacer()
+                    markReturnedButton(pid, label: "Mark \(d.merchant) returned")
+                        .font(.title2)
+                }
+            }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
@@ -124,11 +134,27 @@ struct DeadlinesWidgetView: View {
                         .font(.caption.weight(.semibold))
                         .foregroundStyle(color(for: days))
                         .monospacedDigit()
+                    if d.kind == .returnWindow, let pid = d.purchaseID {
+                        markReturnedButton(pid, label: "Mark \(d.merchant) returned")
+                            .font(.callout)
+                    }
                 }
             }
             Spacer(minLength: 0)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+    }
+
+    /// The interactive "returned" control. Runs `MarkReturnedIntent` in place —
+    /// the widget updates without launching the app (see the intent's notes).
+    private func markReturnedButton(_ purchaseID: String, label: String) -> some View {
+        Button(intent: MarkReturnedIntent(purchaseID: purchaseID)) {
+            Image(systemName: "checkmark.circle.fill")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.green)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func countdown(_ days: Int) -> String {
