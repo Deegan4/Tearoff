@@ -267,16 +267,22 @@ def price_subscription(sub_id, product_id, target):
     st, resp = call("POST", "/v1/subscriptionPrices", body)
     if st in (200, 201):
         print(f"  priced {product_id} at ${target}")
+    elif st == 409:
+        # Apple's API cannot create the FIRST (base) price for a subscription —
+        # it returns a generic RELATIONSHIP.INVALID. The initial price must be
+        # set once in the App Store Connect UI; after that the API can manage it.
+        print(f"  {product_id}: set the initial ${target} price once in the ASC "
+              f"UI (Apple API can't create a subscription's first price).")
     else:
         print(f"  ERROR pricing {product_id}:", st, errs(resp))
 
 
 def iap_current_prices(iap_id):
-    """Set of US customer-price strings on the IAP's active price schedule."""
+    """Set of US customer-price strings on the IAP's active price schedule.
+    The schedule's id equals the IAP id; its manual prices carry the point."""
     st, resp = call("GET",
-        f"/v2/inAppPurchases/{iap_id}/iapPriceSchedule?include=manualPrices,automaticPrices"
-        "&fields[inAppPurchasePrices]=startDate")
-    # The included price points carry the customer price; gather them all.
+        f"/v1/inAppPurchasePriceSchedules/{iap_id}/manualPrices"
+        "?include=inAppPurchasePricePoint")
     return {p["attributes"].get("customerPrice")
             for p in resp.get("included", []) or []
             if p.get("type") == "inAppPurchasePricePoints"}
@@ -290,8 +296,9 @@ def price_nonconsumable(iap_id, product_id, target):
     if not pp_id:
         print(f"  ERROR {product_id}: no US price point for ${target}"); return
     # A price schedule is a compound create: the manual US price is an included
-    # object the top-level relationship points at by a client-chosen temp id.
-    ph = "usd-base"
+    # object the top-level relationship points at by a client-chosen local id,
+    # which Apple requires in ${...} form for inline creation.
+    ph = "${usd-base}"
     body = {"data": {"type": "inAppPurchasePriceSchedules",
         "relationships": {
             "inAppPurchase": {"data": {"type": "inAppPurchases", "id": iap_id}},
