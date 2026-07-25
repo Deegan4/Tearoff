@@ -55,9 +55,10 @@ EN = "en-US"
 # IAP/sub description 45, app description 4000. Kept within them below.
 PRIMARY_CATEGORY = "UTILITIES"
 SUPPORT_URL = "https://github.com/Deegan4/Tearoff/issues"
-# GitHub renders this Markdown at a public, reachable URL (resolves once the
-# PRIVACY.md on `main` is merged).
-PRIVACY_URL = "https://github.com/Deegan4/Tearoff/blob/main/PRIVACY.md"
+# The GitHub Pages site (docs/), not the raw Markdown blob — a real hosted
+# page. Resolves once feat/github-pages-site merges and Pages is enabled
+# (Settings → Pages → Deploy from branch → main, /docs).
+PRIVACY_URL = "https://deegan4.github.io/Tearoff/privacy.html"
 
 SUBTITLE = "Never miss a return window"
 KEYWORDS = "receipt,return,warranty,refund,deadline,reminder,tracker,expense,scanner,purchases"
