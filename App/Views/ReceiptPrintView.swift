@@ -1,4 +1,5 @@
 import SwiftUI
+import CoreImage.CIFilterBuiltins
 import VaultCore
 
 /// Animated "thermal printer" presentation of a purchase. The paper feeds
@@ -242,6 +243,16 @@ struct ReceiptPrintView: View {
         .accessibilityElement(children: .combine)
     }
 
+    /// What the printed barcode encodes: the actual scanned product barcode
+    /// when there is one, else the order number, else the purchase's own id.
+    /// Always non-empty (Code128 can't encode an empty message) and always
+    /// something real — never arbitrary decoration.
+    private static func barcodeData(for purchase: StoredPurchase) -> String {
+        if !purchase.barcode.isEmpty { return purchase.barcode }
+        if !purchase.orderNumber.isEmpty { return purchase.orderNumber }
+        return purchase.id.uuidString
+    }
+
     private var rows: [AnyView] {
         var r: [AnyView] = []
         r.append(AnyView(
@@ -270,7 +281,7 @@ struct ReceiptPrintView: View {
                                      estimate: w.provenance.isEstimate)))
         }
         r.append(AnyView(solid))
-        r.append(AnyView(Barcode(seed: purchase.id).frame(height: 42).padding(.top, 2)
+        r.append(AnyView(Barcode(data: Self.barcodeData(for: purchase)).frame(height: 42).padding(.top, 2)
             .accessibilityHidden(true)))
         r.append(AnyView(
             Text("THANK YOU")
@@ -412,25 +423,36 @@ private struct ReceiptSlip: Shape {
     }
 }
 
-/// A decorative barcode. Deterministic per purchase id so a given receipt
-/// always renders the same bars.
+/// A real, scannable Code128 barcode — not decoration. Encodes whatever
+/// `ReceiptPrintView.barcodeData(for:)` resolved (the scanned product
+/// barcode, the order number, or the purchase id as a last resort), so a
+/// barcode reader decodes something real. This does not mean it will be
+/// honored as an in-store return scan — most retailers look up returns by
+/// their own receipt/order system, not an arbitrary barcode — but nothing
+/// here fakes a scan that decodes to nothing.
 private struct Barcode: View {
-    let seed: UUID
+    let data: String
+
+    private var image: UIImage? {
+        let filter = CIFilter.code128BarcodeGenerator()
+        filter.message = Data(data.utf8)
+        filter.quietSpace = 6
+        guard let output = filter.outputImage,
+              let cgImage = CIContext().createCGImage(output, from: output.extent)
+        else { return nil }
+        return UIImage(cgImage: cgImage)
+    }
 
     var body: some View {
-        Canvas { context, size in
-            let bytes = Array(seed.uuidString.utf8)
-            var x: CGFloat = 0
-            var i = 0
-            while x < size.width && i < 200 {
-                let w = CGFloat(1 + Int(bytes[i % bytes.count]) % 4)
-                if i % 2 == 0 {
-                    let bar = Path(CGRect(x: x, y: 0, width: w, height: size.height))
-                    context.fill(bar, with: .color(.black))
-                }
-                x += w
-                i += 1
-            }
+        if let image {
+            // .none keeps bar edges crisp — the filter's native output is
+            // only a few points tall, and default interpolation would blur
+            // adjacent bars together once stretched to fill the row.
+            Image(uiImage: image)
+                .interpolation(.none)
+                .resizable()
+        } else {
+            Color.clear
         }
     }
 }
