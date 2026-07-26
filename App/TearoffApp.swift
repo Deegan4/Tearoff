@@ -13,7 +13,13 @@ struct TearoffApp: App {
             VaultView()
                 .environment(store)
                 .preferredColorScheme(appearance.colorScheme)
-                .task { _ = await NotificationScheduler.shared.requestAuthorization() }
+                // Ask for notifications only once onboarding has explained why
+                // they matter — a cold prompt on first launch (over the top of
+                // onboarding, no less) reads as spam and gets denied.
+                .task(id: hasCompletedOnboarding) {
+                    guard hasCompletedOnboarding else { return }
+                    _ = await NotificationScheduler.shared.requestAuthorization()
+                }
                 .task { await store.loadProducts() }
                 .task {
                     #if DEBUG

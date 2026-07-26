@@ -1,10 +1,13 @@
 import SwiftUI
 
 /// First-launch introduction. Shown once via `.hasCompletedOnboarding`;
-/// swipeable pages walk through the core loop (scan → print → track → alert)
-/// before landing on a free-vs-Pro summary. One page hosts a live, looping
-/// replay of the thermal-printer receipt animation so the app's signature
-/// moment sells itself before anyone's added a purchase.
+/// swipeable pages walk through the core loop (track → print → alert) before
+/// landing on a free-vs-Pro summary.
+///
+/// Every page shows a *mockup of the real product* rather than a decorative
+/// icon — a fanned stack of deadline cards, the live thermal-printer replay,
+/// an actual alert banner, and the real Pro list. A new user sees what they're
+/// getting before they've added a single receipt.
 struct OnboardingView: View {
     @AppStorage(OnboardingView.storageKey) private var hasCompletedOnboarding = false
     @State private var page = 0
@@ -12,54 +15,58 @@ struct OnboardingView: View {
     private let pageCount = 4
 
     var body: some View {
-        VStack(spacing: 0) {
-            TabView(selection: $page) {
-                OnboardingPageView(
-                    icon: "receipt",
-                    title: "Never miss a return window",
-                    subtitle: "Tearoff tracks every receipt's return and warranty deadline, so nothing quietly expires in a drawer.",
-                    isActive: page == 0
-                )
-                .tag(0)
+        ZStack {
+            OnboardingBackdrop(page: page)
 
-                OnboardingPrinterPage(isActive: page == 1)
-                    .tag(1)
+            VStack(spacing: 0) {
+                TabView(selection: $page) {
+                    OnboardingPage(
+                        title: "You own this jacket now",
+                        subtitle: "It didn't fit. The receipt went in a drawer. The window closed on Tuesday. Congratulations on your $84 jacket, forever.",
+                        isActive: page == 0
+                    ) { ExpiredReceiptMock(isActive: page == 0) }
+                        .tag(0)
 
-                OnboardingPageView(
-                    icon: "bell.badge",
-                    title: "Get a nudge before it's too late",
-                    subtitle: "Alerts land while there's still time to act — Pro adds a nudge if you're back near the store, too.",
-                    isActive: page == 2
-                )
-                .tag(2)
+                    OnboardingPage(
+                        title: "So we built a tiny printer",
+                        subtitle: "Every purchase gets its own slip, with the deadline printed right on it. Was this necessary? No. Is it satisfying? Absolutely.",
+                        isActive: page == 1
+                    ) { MiniReceiptPrinter(isActive: page == 1) }
+                        .tag(1)
 
-                OnboardingPageView(
-                    icon: "checkmark.seal",
-                    title: "Free forever, Pro when you want it",
-                    subtitle: "Manual receipts, alerts, and your full vault are free. Pro adds camera + AI extraction, warranty tracking, proximity reminders, direct return links, and export — CSV or a yearly PDF report.",
-                    isActive: page == 3
-                )
-                .tag(3)
-            }
-            .tabViewStyle(.page(indexDisplayMode: .never))
-            .animation(Motion.reveal, value: page)
+                    OnboardingPage(
+                        title: "Then we nag you. Politely.",
+                        subtitle: "A nudge while you can still do something about it — not a respectful moment of silence after the window closes.",
+                        isActive: page == 2
+                    ) { AlertBannerMock(isActive: page == 2) }
+                        .tag(2)
 
-            dots
-
-            Button(page == pageCount - 1 ? "Get Started" : "Continue") {
-                if page == pageCount - 1 {
-                    hasCompletedOnboarding = true
-                } else {
-                    withAnimation(Motion.premium) { page += 1 }
+                    OnboardingPage(
+                        title: "Free forever. Pro if you're fancy.",
+                        subtitle: "Your receipts, alerts, and full vault cost nothing, always. Pro just does the typing for you.",
+                        isActive: page == 3
+                    ) { ProFeatureList(isActive: page == 3) }
+                        .tag(3)
                 }
+                .tabViewStyle(.page(indexDisplayMode: .never))
+
+                dots
+
+                Button(page == pageCount - 1 ? "Get Started" : "Continue") {
+                    if page == pageCount - 1 {
+                        hasCompletedOnboarding = true
+                    } else {
+                        withAnimation(Motion.premium) { page += 1 }
+                    }
+                }
+                .font(.headline)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 14)
+                .buttonStyle(.glass)
+                .tint(.blue)
+                .padding(.horizontal)
+                .padding(.bottom, 24)
             }
-            .font(.headline)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
-            .buttonStyle(.glass)
-            .tint(.blue)
-            .padding(.horizontal)
-            .padding(.bottom, 24)
         }
     }
 
@@ -76,74 +83,335 @@ struct OnboardingView: View {
     }
 }
 
-/// A single icon + headline + subtitle page. The icon plays a bounce symbol
-/// effect and the text cascades in via `staggeredAppear` each time the page
-/// becomes active (rather than once on first layout), so swiping back to it
-/// replays the motion instead of showing static content.
-private struct OnboardingPageView: View {
-    let icon: String
+// MARK: - Chrome
+
+/// A soft, slowly drifting color wash behind every page. The hue shifts per
+/// page so swiping feels like moving through distinct rooms rather than
+/// sliding text over a flat background.
+private struct OnboardingBackdrop: View {
+    let page: Int
+
+    private var tint: Color {
+        switch page {
+        case 0: .blue
+        case 1: .indigo
+        case 2: .orange
+        default: .green
+        }
+    }
+
+    var body: some View {
+        ZStack {
+            Color(.systemBackground)
+            RadialGradient(
+                colors: [tint.opacity(0.28), tint.opacity(0.04), .clear],
+                center: .top, startRadius: 8, endRadius: 460
+            )
+            .ignoresSafeArea()
+        }
+        .animation(.easeInOut(duration: 0.55), value: page)
+        .ignoresSafeArea()
+    }
+}
+
+/// Shared page scaffold: a visual up top, then title and subtitle. Text
+/// cascades in each time the page becomes active so swiping back replays it.
+private struct OnboardingPage<Visual: View>: View {
     let title: String
     let subtitle: String
     let isActive: Bool
-
-    @State private var bounce = false
+    @ViewBuilder var visual: Visual
 
     var body: some View {
-        VStack(spacing: 20) {
-            Spacer()
-            Image(systemName: icon)
-                .font(.system(size: 72))
-                .foregroundStyle(.tint)
-                .symbolEffect(.bounce, value: bounce)
-                .scaleEffect(isActive ? 1 : 0.7)
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            visual
+                .frame(height: 290)
+                .scaleEffect(isActive ? 1 : 0.92)
                 .opacity(isActive ? 1 : 0)
                 .animation(Motion.alive, value: isActive)
-            Text(title)
-                .font(.title2.weight(.semibold))
-                .multilineTextAlignment(.center)
-                .staggeredAppear(0)
-            Text(subtitle)
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .staggeredAppear(1)
-            Spacer()
-            Spacer()
+            // Fixed gap so the visual and its caption read as one unit; the
+            // flexible space all lives outside the pair.
+            Spacer().frame(height: 28)
+            VStack(spacing: 12) {
+                Text(title)
+                    .font(.title2.weight(.bold))
+                    .multilineTextAlignment(.center)
+                    .staggeredAppear(0)
+                Text(subtitle)
+                    .font(.callout)
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 28)
+                    .staggeredAppear(1)
+            }
+            Spacer(minLength: 0)
+            Spacer(minLength: 0)
         }
         .padding(.horizontal)
-        .onChange(of: isActive) { _, active in
-            if active { bounce.toggle() }
-        }
-        .onAppear { if isActive { bounce.toggle() } }
     }
 }
 
-/// The onboarding page that shows off the signature moment: a scaled-down,
-/// self-looping replay of the thermal-printer receipt feed, so a new user
-/// sees the payoff before they've ever added a purchase.
-private struct OnboardingPrinterPage: View {
+// MARK: - Page 1: the problem
+
+/// The pain, staged: a jacket receipt sitting in a drawer while its countdown
+/// ticks 3 → 2 → 1 → 0 and the card goes grey and stamped. This is the whole
+/// reason the app exists, so the first thing a user sees is the thing that
+/// already happened to them.
+private struct ExpiredReceiptMock: View {
     let isActive: Bool
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var daysLeft = 3
+    @State private var expired = false
+    @State private var stampShown = false
+    @State private var loopTask: Task<Void, Never>?
+
     var body: some View {
-        VStack(spacing: 16) {
-            Spacer(minLength: 8)
-            MiniReceiptPrinter(isActive: isActive)
-                .frame(height: 320)
-            Text("Watch it print")
-                .font(.title2.weight(.semibold))
-                .staggeredAppear(0)
-            Text("Every purchase gets its own printed slip — deadline included.")
-                .font(.body)
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-                .padding(.horizontal, 32)
-                .staggeredAppear(1)
-            Spacer()
+        ZStack {
+            card
+                .rotationEffect(.degrees(expired ? -3 : 0))
+                .animation(Motion.premium, value: expired)
+            if stampShown { stamp.transition(.scale(scale: 1.6).combined(with: .opacity)) }
         }
-        .padding(.horizontal)
+        .onChange(of: isActive) { _, active in
+            if active { start() } else { stop() }
+        }
+        .onAppear { if isActive { start() } }
+        .onDisappear { stop() }
+    }
+
+    private var card: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Northline Outfitters")
+                    .font(.subheadline.weight(.semibold))
+                    .lineLimit(1)
+                Spacer(minLength: 8)
+                Text("$84.00")
+                    .font(.subheadline.monospacedDigit())
+            }
+            Text("Wool jacket — one size too small")
+                .font(.caption)
+                .foregroundStyle(.secondary)
+
+            Divider().opacity(0.5)
+
+            HStack(spacing: 6) {
+                Image(systemName: expired ? "xmark.circle.fill" : "clock.badge.exclamationmark")
+                    .font(.footnote)
+                    .symbolEffect(.pulse, options: .repeating, isActive: !expired)
+                Text(expired ? "Return window closed" : "Return within \(daysLeft) day\(daysLeft == 1 ? "" : "s")")
+                    .font(.footnote.weight(.medium))
+                    .contentTransition(.numericText(countsDown: true))
+            }
+            .foregroundStyle(expired ? Color.secondary : .red)
+        }
+        .padding(16)
+        .frame(width: 272, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 18))
+        .overlay(
+            RoundedRectangle(cornerRadius: 18)
+                .strokeBorder(.white.opacity(0.10), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.25), radius: 14, y: 8)
+        .saturation(expired ? 0.15 : 1)
+        .opacity(expired ? 0.55 : 1)
+        .animation(Motion.premium, value: expired)
+    }
+
+    private var stamp: some View {
+        Text("TOO LATE")
+            .font(.system(size: 26, weight: .heavy, design: .rounded))
+            .tracking(2)
+            .foregroundStyle(.red.opacity(0.85))
+            .padding(.horizontal, 14).padding(.vertical, 7)
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(.red.opacity(0.85), lineWidth: 3)
+            )
+            .rotationEffect(.degrees(-12))
+            .shadow(color: .red.opacity(0.35), radius: 10)
+    }
+
+    private func start() {
+        guard loopTask == nil else { return }
+        if reduceMotion {
+            daysLeft = 0; expired = true; stampShown = true
+            return
+        }
+        loopTask = Task { @MainActor in
+            while !Task.isCancelled {
+                // Reset, then let the clock run out on them.
+                withAnimation(Motion.snappy) { stampShown = false }
+                expired = false
+                daysLeft = 3
+                try? await Task.sleep(for: .seconds(0.9))
+
+                for day in [2, 1] {
+                    if Task.isCancelled { break }
+                    withAnimation(Motion.snappy) { daysLeft = day }
+                    try? await Task.sleep(for: .seconds(0.75))
+                }
+                if Task.isCancelled { break }
+
+                withAnimation(Motion.premium) { expired = true }
+                try? await Task.sleep(for: .seconds(0.25))
+                withAnimation(.spring(response: 0.34, dampingFraction: 0.62, blendDuration: 0)) {
+                    stampShown = true
+                }
+                try? await Task.sleep(for: .seconds(2.4))
+            }
+        }
+    }
+
+    private func stop() {
+        loopTask?.cancel()
+        loopTask = nil
+        stampShown = false
+        expired = false
+        daysLeft = 3
     }
 }
+
+// MARK: - Page 3: alert banner
+
+/// A mock iOS notification banner that slides in, waits, and slides back out
+/// on a loop — the actual thing the user will see on their lock screen.
+private struct AlertBannerMock: View {
+    let isActive: Bool
+    @State private var shown = false
+    @State private var loopTask: Task<Void, Never>?
+
+    var body: some View {
+        // Centered in the visual slot (rather than pinned to the top) so the
+        // page doesn't open on a void; it still drops in from above, which is
+        // how a real banner arrives.
+        banner
+            .offset(y: shown ? 0 : -140)
+            .opacity(shown ? 1 : 0)
+            .animation(.spring(response: 0.5, dampingFraction: 0.78, blendDuration: 0), value: shown)
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .onChange(of: isActive) { _, active in
+            if active { start() } else { stop() }
+        }
+        .onAppear { if isActive { start() } }
+        .onDisappear { stop() }
+    }
+
+    private var banner: some View {
+        HStack(spacing: 12) {
+            RoundedRectangle(cornerRadius: 9)
+                .fill(LinearGradient(colors: [.blue, .indigo], startPoint: .top, endPoint: .bottom))
+                .frame(width: 38, height: 38)
+                .overlay(
+                    Image(systemName: "receipt")
+                        .font(.system(size: 18, weight: .semibold))
+                        .foregroundStyle(.white)
+                )
+            VStack(alignment: .leading, spacing: 2) {
+                HStack {
+                    Text("TEAROFF")
+                        .font(.caption2.weight(.semibold))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    Text("now")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                Text("Return window closing")
+                    .font(.subheadline.weight(.semibold))
+                Text("Your Northline Outfitters return window closes in 3 days.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+            }
+        }
+        .padding(12)
+        .frame(width: 300, alignment: .leading)
+        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+        .overlay(
+            RoundedRectangle(cornerRadius: 20)
+                .strokeBorder(.white.opacity(0.12), lineWidth: 0.5)
+        )
+        .shadow(color: .black.opacity(0.28), radius: 16, y: 8)
+    }
+
+    private func start() {
+        guard loopTask == nil else { return }
+        loopTask = Task { @MainActor in
+            while !Task.isCancelled {
+                shown = true
+                try? await Task.sleep(for: .seconds(2.6))
+                if Task.isCancelled { break }
+                shown = false
+                try? await Task.sleep(for: .seconds(0.9))
+            }
+        }
+    }
+
+    private func stop() {
+        loopTask?.cancel()
+        loopTask = nil
+        shown = false
+    }
+}
+
+// MARK: - Page 4: Pro feature list
+
+/// The real Pro list, cascading in — same features the paywall sells, so the
+/// last onboarding page and the paywall tell one consistent story.
+private struct ProFeatureList: View {
+    let isActive: Bool
+    @State private var shown = false
+
+    private let features: [(icon: String, label: String)] = [
+        ("camera.viewfinder", "Camera + AI receipt extraction"),
+        ("shield.lefthalf.filled", "Warranty tracking"),
+        ("widget.small", "Home Screen widgets"),
+        ("location", "Proximity reminders"),
+        ("square.and.arrow.up", "CSV + yearly PDF export"),
+    ]
+
+    var body: some View {
+        VStack(spacing: 10) {
+            Text("PRO")
+                .font(.caption.weight(.bold))
+                .tracking(3)
+                .foregroundStyle(.tint)
+                .padding(.horizontal, 12).padding(.vertical, 5)
+                .background(.tint.opacity(0.14), in: Capsule())
+                .padding(.bottom, 4)
+                .accessibilityLabel("Pro features")
+
+            ForEach(Array(features.enumerated()), id: \.offset) { index, feature in
+                HStack(spacing: 12) {
+                    Image(systemName: feature.icon)
+                        .font(.footnote)
+                        .foregroundStyle(.tint)
+                        .frame(width: 22)
+                    Text(feature.label)
+                        .font(.subheadline)
+                    Spacer(minLength: 0)
+                    Image(systemName: "checkmark")
+                        .font(.caption.weight(.bold))
+                        .foregroundStyle(.green)
+                }
+                .padding(.horizontal, 14)
+                .padding(.vertical, 10)
+                .frame(width: 290, alignment: .leading)
+                .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                .opacity(shown ? 1 : 0)
+                .offset(y: shown ? 0 : 16)
+                .animation(Motion.alive.delay(Double(index) * 0.07), value: shown)
+            }
+        }
+        .onChange(of: isActive) { _, active in shown = active }
+        .onAppear { shown = isActive }
+    }
+}
+
+// MARK: - Page 2: looping thermal printer
 
 /// Self-contained, looping miniature of the ReceiptPrintView "thermal
 /// printer" motion — demo data only, no purchase model required. Replays
@@ -161,7 +429,7 @@ private struct MiniReceiptPrinter: View {
     @State private var loopTask: Task<Void, Never>?
 
     private let paperWidth: CGFloat = 190
-    private let paperHeight: CGFloat = 210
+    private let paperHeight: CGFloat = 200
 
     var body: some View {
         VStack(spacing: 0) {
