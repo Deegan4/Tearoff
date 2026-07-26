@@ -8,11 +8,13 @@ import VaultCore
 /// accuracy improvement is a measured loop, not guesswork.
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.modelContext) private var context
     @Environment(StoreManager.self) private var store
     @Query private var purchases: [StoredPurchase]
     // Observed so the dashboard reflects new scans live.
     private var telemetry = ExtractionTelemetryStore.shared
     @State private var confirmingReset = false
+    @State private var confirmingDeleteAllData = false
     @State private var exportedFile: ExportedFile?
     @State private var showingPaywall = false
     /// Same key the app root reads, so the choice applies immediately.
@@ -49,6 +51,7 @@ struct SettingsView: View {
                 proximitySection
                 if !purchases.isEmpty { insightsSection }
                 exportSection
+                dataSection
                 Section {
                     LabeledContent("Scans confirmed", value: "\(ledger.scanCount)")
                     LabeledContent("Overall accuracy") {
@@ -91,6 +94,16 @@ struct SettingsView: View {
                 }
             }
             .confirmObliterate($confirmingReset) { telemetry.reset() }
+            .confirmationDialog(
+                "Delete all \(purchases.count) receipts?",
+                isPresented: $confirmingDeleteAllData,
+                titleVisibility: .visible
+            ) {
+                Button("Delete Everything", role: .destructive, action: deleteAllData)
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This erases every purchase and receipt image on this device (and your private iCloud, if signed in). It can't be undone.")
+            }
             .sheet(item: $exportedFile) { file in
                 ShareSheet(items: [file.url])
             }
@@ -235,6 +248,22 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Data
+
+    @ViewBuilder
+    private var dataSection: some View {
+        Section {
+            Button("Delete All Receipts", role: .destructive) {
+                confirmingDeleteAllData = true
+            }
+            .disabled(purchases.isEmpty)
+        } header: {
+            Text("Data")
+        } footer: {
+            Text("Permanently deletes every purchase in your vault, including scanned receipt images, and cancels their alerts. This can't be undone. To remove just one purchase, swipe it away from the vault list instead.")
+        }
+    }
+
     @ViewBuilder
     private func fieldRow(_ field: ExtractionField) -> some View {
         let accuracy = ledger.accuracy(for: field)
@@ -274,6 +303,18 @@ struct SettingsView: View {
         case 0.7..<0.9: return .orange
         default: return .red
         }
+    }
+
+    /// Cancels every purchase's pending alerts, deletes them all from
+    /// SwiftData (CloudKit propagates the deletion), then republishes the
+    /// widget digest so it reflects the now-empty vault immediately.
+    private func deleteAllData() {
+        for purchase in purchases {
+            let id = purchase.id
+            Task { await NotificationScheduler.shared.cancel(purchaseID: id) }
+            context.delete(purchase)
+        }
+        WidgetBridge.publish([], isPro: store.isPro)
     }
 }
 
