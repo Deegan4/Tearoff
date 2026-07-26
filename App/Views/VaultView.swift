@@ -22,6 +22,10 @@ struct VaultView: View {
     @State private var showingSettings = false
     @State private var showingPaywall = false
     @AppStorage("proximityRemindersEnabled") private var proximityRemindersEnabled = false
+    /// Shown once, ever — a soft nudge toward scanning, never a hard cap.
+    /// The vault itself stays unlimited on Free; see the design note above
+    /// `scanUpsellThreshold`.
+    @AppStorage("hasSeenScanUpsell") private var hasSeenScanUpsell = false
     /// Observed so Siri / Shortcuts intents can drive navigation.
     private let router = IntentRouter.shared
     @Namespace private var heroNS
@@ -49,6 +53,23 @@ struct VaultView: View {
         ResolverStore.shared.insights(for: purchases).openReturnValueCents
     }
 
+    /// Purchases typed in by hand rather than scanned — `receiptImageData` is
+    /// only ever set on the scan path (see AddPurchaseView), so its absence
+    /// is a reliable proxy for "this one was manual work."
+    private var manualEntryCount: Int {
+        purchases.count { $0.receiptImageData == nil }
+    }
+
+    /// The vault itself is never capped — Free is "manual receipts, alerts,
+    /// full vault" (spec §7) and staying unlimited is the trust pitch for a
+    /// receipt vault. This is a one-time nudge toward Pro scanning once
+    /// manual entry has clearly become a chore, not a paywall in disguise.
+    private let scanUpsellThreshold = 8
+
+    private var shouldShowScanUpsell: Bool {
+        !store.isPro && !hasSeenScanUpsell && manualEntryCount >= scanUpsellThreshold
+    }
+
     /// The `@Query` fetches everything; search and sort are applied in memory.
     /// A personal receipt vault is small enough that this stays cheap and
     /// keeps the query itself simple.
@@ -65,6 +86,9 @@ struct VaultView: View {
     var body: some View {
         NavigationSplitView {
             List(selection: $selection) {
+                if shouldShowScanUpsell {
+                    scanUpsellRow
+                }
                 ForEach(visiblePurchases) { purchase in
                     NavigationLink(value: purchase) {
                         PurchaseRow(
@@ -88,6 +112,7 @@ struct VaultView: View {
             .navigationTitle("Vault")
             // Reorders when the sort changes settle with the house spring.
             .animation(Motion.premium, value: sort)
+            .animation(Motion.premium, value: hasSeenScanUpsell)
             .searchable(text: $searchText, prompt: "Merchant, category, or note")
             .overlay {
                 if purchases.isEmpty {
@@ -226,6 +251,43 @@ struct VaultView: View {
             parsed: ReceiptParser.parse(lines),
             imageData: ReceiptImage.forStorage(image)
         )
+    }
+
+    /// One-time nudge row: "you've typed N receipts by hand, scanning is
+    /// faster" — dismissible, and marked seen either way so it never nags
+    /// twice.
+    private var scanUpsellRow: some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: "camera.viewfinder")
+                .font(.title3)
+                .foregroundStyle(.tint)
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Typing gets old")
+                    .font(.subheadline.weight(.semibold))
+                Text("You've logged \(manualEntryCount) receipts by hand. Pro scans one in about 2 seconds.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                Button("Try Pro scanning") {
+                    hasSeenScanUpsell = true
+                    showingPaywall = true
+                }
+                .font(.caption.weight(.semibold))
+                .padding(.top, 2)
+            }
+            Spacer(minLength: 0)
+            Button {
+                hasSeenScanUpsell = true
+            } label: {
+                Image(systemName: "xmark")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+            .buttonStyle(.plain)
+        }
+        .padding(.vertical, 4)
+        .listRowBackground(Color.accentColor.opacity(0.08))
+        .transition(.opacity.combined(with: .move(edge: .top)))
     }
 
     /// Apply any "Mark returned" taps the widget queued while the app wasn't
