@@ -102,9 +102,37 @@ struct PaywallView: View {
         // paywall open — an un-animated cut here is the most-seen jank in the
         // app. Fade always; only lift under normal motion settings.
         Group {
-            if store.displayProducts.isEmpty {
+            if store.loadState == .loading {
                 ProgressView().frame(maxWidth: .infinity).padding(.vertical)
                     .transition(.opacity)
+            } else if store.displayProducts.isEmpty {
+                // Never leave the sheet spinning: say what happened and offer
+                // a way out. An endless spinner reads as a broken app, and the
+                // user has no idea whether to wait or leave.
+                VStack(spacing: 10) {
+                    Image(systemName: "exclamationmark.triangle")
+                        .font(.title2)
+                        .foregroundStyle(.secondary)
+                    Text(store.loadState == .failed
+                         ? "Couldn't reach the App Store."
+                         : "Pro isn't available to purchase right now.")
+                        .font(.callout.weight(.semibold))
+                        .multilineTextAlignment(.center)
+                    Text(store.loadState == .failed
+                         ? "Check your connection and try again. Everything you've already saved is untouched."
+                         : "This is on our end, not yours. Your vault, alerts, and manual receipts keep working as normal.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                    Button("Try Again") {
+                        Task { await store.loadProducts() }
+                    }
+                    .font(.callout.weight(.semibold))
+                    .padding(.top, 2)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, 8)
+                .transition(.opacity)
             } else {
                 VStack(spacing: 10) {
                     ForEach(store.displayProducts, id: \.id) { product in
@@ -145,7 +173,7 @@ struct PaywallView: View {
                 .animation(Motion.snappy, value: store.isWorking)
             }
         }
-        .animation(Motion.premium, value: store.displayProducts.isEmpty)
+        .animation(Motion.premium, value: store.loadState)
     }
 
     private func subtitle(for product: Product) -> String {

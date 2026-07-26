@@ -12,6 +12,21 @@ import VaultCore
 @MainActor
 @Observable
 final class StoreManager {
+    /// Outcome of the last `loadProducts()`. The paywall must be able to tell
+    /// "still loading" from "the store gave us nothing" — collapsing both into
+    /// an empty array left the sheet spinning forever with no way back.
+    enum ProductLoadState: Equatable {
+        case loading
+        case loaded
+        /// The request succeeded but returned no products. Usually means the
+        /// products are not yet approved/available in App Store Connect, or
+        /// aren't offered in this storefront.
+        case unavailable
+        /// The request itself failed — offline, or StoreKit error.
+        case failed
+    }
+
+    private(set) var loadState: ProductLoadState = .loading
     private(set) var products: [Product] = []
     private(set) var activeProductIDs: Set<String> = []
     /// Set while a purchase or restore is in flight, to disable the paywall CTAs.
@@ -61,10 +76,13 @@ final class StoreManager {
     deinit { updates?.cancel() }
 
     func loadProducts() async {
+        loadState = .loading
         do {
             products = try await Product.products(for: TearoffProduct.proGranting)
+            loadState = products.isEmpty ? .unavailable : .loaded
         } catch {
             products = []
+            loadState = .failed
         }
         await refreshEntitlements()
     }
