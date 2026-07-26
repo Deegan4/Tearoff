@@ -33,12 +33,10 @@ struct SettingsView: View {
     /// Pro feature: nudge the user when they're near a store with an open
     /// return window. Off by default — this is an opt-in, not a surprise.
     @AppStorage("proximityRemindersEnabled") private var proximityRemindersEnabled = false
-    #if DEBUG
     @AppStorage(OnboardingView.storageKey) private var hasCompletedOnboarding = false
     /// Mirrors the counter VaultView increments on a real scan, so the free
-    /// allowance can be exercised on the Simulator (which has no camera).
+    /// allowance can be exercised without a camera.
     @AppStorage("freeScansUsed") private var freeScansUsed = 0
-    #endif
 
     private var ledger: AccuracyLedger { telemetry.ledger }
 
@@ -74,28 +72,32 @@ struct SettingsView: View {
     var body: some View {
         NavigationStack {
             Form {
-                #if DEBUG
-                Section {
-                    Toggle("Unlock Pro (dev)", isOn: Binding(
-                        get: { store.debugProUnlock },
-                        set: { store.debugProUnlock = $0 }))
-                    Button("Replay Onboarding") {
-                        hasCompletedOnboarding = false
-                        dismiss()
+                // Debug *and* TestFlight — a TestFlight tester cannot reach Pro
+                // until the products are purchasable, so compiling this out of
+                // Release removed it from the one build that needed it most.
+                // Never present in an App Store build; see BuildEnvironment.
+                if BuildEnvironment.allowsDeveloperTools {
+                    Section {
+                        Toggle("Unlock Pro (dev)", isOn: Binding(
+                            get: { store.debugProUnlock },
+                            set: { store.debugProUnlock = $0 }))
+                        Button("Replay Onboarding") {
+                            hasCompletedOnboarding = false
+                            dismiss()
+                        }
+                        // The Simulator has no camera, so the free-scan
+                        // allowance is otherwise untestable there. This drives
+                        // the same counter the real scan path increments.
+                        Stepper(
+                            "Free scans used: \(freeScansUsed) / \(ScanAllowance.freeLimit)",
+                            value: $freeScansUsed, in: 0...(ScanAllowance.freeLimit + 1)
+                        )
+                    } header: {
+                        Text("Developer")
+                    } footer: {
+                        Text("Not present in App Store builds. Unlocks camera scan, warranty, export, and widgets so they can be tested before the products are purchasable. Turn it off to test a real sandbox purchase.")
                     }
-                    // The Simulator has no camera, so the free-scan allowance
-                    // is otherwise untestable without a device. These drive
-                    // the same counter the real scan path increments.
-                    Stepper(
-                        "Free scans used: \(freeScansUsed) / \(ScanAllowance.freeLimit)",
-                        value: $freeScansUsed, in: 0...(ScanAllowance.freeLimit + 1)
-                    )
-                } header: {
-                    Text("Developer")
-                } footer: {
-                    Text("Dev builds have no purchasable products; this unlocks camera scan, warranty, export, and widgets for testing.")
                 }
-                #endif
                 Section {
                     RankCard(progress: rank)
                 } header: {

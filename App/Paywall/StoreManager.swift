@@ -37,20 +37,32 @@ final class StoreManager {
     var tier: ProTier { Entitlement.tier(activeProductIDs: activeProductIDs) }
 
     var isPro: Bool {
-        #if DEBUG
-        if debugProUnlock { return true }
-        #endif
+        // The environment check is deliberately *here* as well as on the UI:
+        // an App Store build must never honour this flag, even if the stored
+        // value carried over from a TestFlight install on the same device.
+        if BuildEnvironment.allowsDeveloperTools && debugProUnlock { return true }
         return tier.isPro
     }
 
-    #if DEBUG
-    /// Dev builds have no purchasable products (the StoreKit config only loads
-    /// under an Xcode run), so Pro features would be unreachable on device.
-    /// This unlocks them; defaults on. Toggle it in Settings → Developer.
-    var debugProUnlock: Bool = UserDefaults.standard.object(forKey: "tearoff.debugProUnlock") as? Bool ?? true {
+    /// Dev unlock for Pro features. Debug builds have no purchasable products
+    /// (the StoreKit config only loads under an Xcode run) and TestFlight
+    /// testers can't buy until the products are approved, so without this Pro
+    /// is unreachable in both. Toggle it in Settings → Developer.
+    ///
+    /// Defaults **on** in Debug for convenience, but **off** in TestFlight so
+    /// it never silently masks a real sandbox purchase during testing.
+    var debugProUnlock: Bool = {
+        if let stored = UserDefaults.standard.object(forKey: "tearoff.debugProUnlock") as? Bool {
+            return stored
+        }
+        #if DEBUG
+        return true
+        #else
+        return false
+        #endif
+    }() {
         didSet { UserDefaults.standard.set(debugProUnlock, forKey: "tearoff.debugProUnlock") }
     }
-    #endif
 
     /// Products sorted for display: monthly, yearly, then lifetime.
     var displayProducts: [Product] {
