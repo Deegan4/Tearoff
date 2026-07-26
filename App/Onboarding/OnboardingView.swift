@@ -29,6 +29,7 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 TabView(selection: $page) {
                     OnboardingPage(
+                        eyebrow: "01 / 04 · THE PROBLEM",
                         title: expiredScenario.title,
                         subtitle: expiredScenario.blurb,
                         isActive: page == 0
@@ -36,6 +37,7 @@ struct OnboardingView: View {
                         .tag(0)
 
                     OnboardingPage(
+                        eyebrow: "02 / 04 · THE FIX",
                         title: "Now you know the exact day",
                         subtitle: "Tearoff reads the receipt, checks the store's policy, and prints the day your window shuts. No more \"I think it's thirty days?\"",
                         isActive: page == 1
@@ -43,6 +45,7 @@ struct OnboardingView: View {
                         .tag(1)
 
                     OnboardingPage(
+                        eyebrow: "03 / 04 · THE NUDGE",
                         title: "Then we nag you. Politely.",
                         subtitle: "A nudge while you can still walk back into the store — not a respectful moment of silence after the window closes.",
                         isActive: page == 2
@@ -50,6 +53,7 @@ struct OnboardingView: View {
                         .tag(2)
 
                     OnboardingPage(
+                        eyebrow: "04 / 04 · THE PRICE",
                         title: "Free forever. Pro if you're fancy.",
                         subtitle: "Receipts, deadlines, and alerts cost nothing — that's the app, not a trial. Pro does the typing for you, and your first \(ScanAllowance.freeLimit) scans are on the house.",
                         isActive: page == 3
@@ -60,14 +64,21 @@ struct OnboardingView: View {
 
                 dots
 
-                Button(page == pageCount - 1 ? "Get Started" : "Continue") {
+                Button {
                     if page == pageCount - 1 {
                         hasCompletedOnboarding = true
                     } else {
                         withAnimation(Motion.premium) { page += 1 }
                     }
+                } label: {
+                    // Tracked monospaced caps, like a key on the printer's own
+                    // front panel rather than a stock iOS call to action.
+                    Text(page == pageCount - 1 ? "GET STARTED" : "CONTINUE")
+                        .font(.system(.subheadline, design: .monospaced).weight(.bold))
+                        .tracking(2)
+                        .frame(maxWidth: .infinity)
+                        .contentTransition(.opacity)
                 }
-                .font(.headline)
                 .frame(maxWidth: .infinity)
                 .padding(.vertical, 14)
                 .buttonStyle(.glass)
@@ -78,16 +89,36 @@ struct OnboardingView: View {
         }
     }
 
+    /// Feed indicator, not page dots. Reads as paper advancing through a
+    /// printer: a monospaced count against a track of tick marks. Generic
+    /// dots would have been the one piece of chrome that belonged to no
+    /// product in particular.
     private var dots: some View {
-        HStack(spacing: 8) {
-            ForEach(0..<pageCount, id: \.self) { i in
-                Capsule()
-                    .fill(i == page ? Color.accentColor : Color.secondary.opacity(0.25))
-                    .frame(width: i == page ? 20 : 7, height: 7)
-                    .animation(Motion.snappy, value: page)
+        HStack(spacing: 10) {
+            Text(String(format: "%02d", page + 1))
+                .font(.system(.caption2, design: .monospaced).weight(.bold))
+                .foregroundStyle(.tint)
+                .contentTransition(.numericText())
+                .monospacedDigit()
+
+            HStack(spacing: 5) {
+                ForEach(0..<pageCount, id: \.self) { i in
+                    Capsule()
+                        .fill(i <= page ? Color.accentColor : Color.secondary.opacity(0.22))
+                        .frame(width: i == page ? 22 : 12, height: 3)
+                        .animation(Motion.snappy, value: page)
+                }
             }
+
+            Text(String(format: "%02d", pageCount))
+                .font(.system(.caption2, design: .monospaced))
+                .foregroundStyle(.tertiary)
+                .monospacedDigit()
         }
-        .padding(.bottom, 20)
+        .animation(Motion.snappy, value: page)
+        .padding(.bottom, 18)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel("Step \(page + 1) of \(pageCount)")
     }
 }
 
@@ -131,7 +162,26 @@ private struct OnboardingBackdrop: View {
 
 /// Shared page scaffold: a visual up top, then title and subtitle. Text
 /// cascades in each time the page becomes active so swiping back replays it.
+/// A dashed rule in the receipt's own vocabulary — the same `-` run the
+/// printed slip uses between sections. Cheaper and more honest than a
+/// Divider: it ties the chrome to the one artefact this app is about.
+struct ReceiptRule: View {
+    var width: Int = 34
+
+    var body: some View {
+        Text(String(repeating: "-", count: width))
+            .font(.system(.caption2, design: .monospaced))
+            .foregroundStyle(.tertiary)
+            .lineLimit(1)
+            .minimumScaleFactor(0.4)
+            .accessibilityHidden(true)
+    }
+}
+
 private struct OnboardingPage<Visual: View>: View {
+    /// Monospaced eyebrow, e.g. "01 / 04 · THE PROBLEM". Deadpan and
+    /// mechanical: it labels the step the way a receipt labels a field.
+    let eyebrow: String
     let title: String
     let subtitle: String
     let isActive: Bool
@@ -140,30 +190,44 @@ private struct OnboardingPage<Visual: View>: View {
     var body: some View {
         VStack(spacing: 0) {
             Spacer(minLength: 0)
+
             visual
-                .frame(height: 290)
+                .frame(height: 272)
                 .scaleEffect(isActive ? 1 : 0.92)
                 .opacity(isActive ? 1 : 0)
                 // Incoming pages settle up into place; outgoing ones sink.
                 .offset(y: isActive ? 0 : 10)
                 .animation(Motion.alive, value: isActive)
-            // Fixed gap so the visual and its caption read as one unit; the
-            // flexible space all lives outside the pair.
-            Spacer().frame(height: 28)
-            VStack(spacing: 12) {
-                Text(title)
-                    .font(.title2.weight(.bold))
-                    .multilineTextAlignment(.center)
+
+            Spacer().frame(height: 30)
+
+            // The copy block is set like a receipt: a tracked monospaced field
+            // label, a rule, then the value. All of the page's character comes
+            // from type and structure rather than from decoration layered
+            // behind it.
+            VStack(spacing: 14) {
+                Text(eyebrow)
+                    .font(.system(.caption2, design: .monospaced).weight(.semibold))
+                    .tracking(3)
+                    .foregroundStyle(.tint)
                     .staggeredAppear(0)
+
+                ReceiptRule()
+                    .staggeredAppear(0)
+
+                Text(title)
+                    .font(.system(.title2, design: .default).weight(.bold))
+                    .multilineTextAlignment(.center)
+                    .staggeredAppear(1)
+
                 Text(subtitle)
                     .font(.callout)
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.center)
-                    .padding(.horizontal, 28)
-                    .staggeredAppear(1)
+                    .padding(.horizontal, 22)
+                    .staggeredAppear(2)
             }
-            // One spacer each side. Two below pushed the whole page into the
-            // top half and left a dead void under the copy.
+
             Spacer(minLength: 0)
         }
         .padding(.horizontal)
