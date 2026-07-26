@@ -4,8 +4,13 @@ import VaultCore
 
 /// Tearoff Pro paywall. Insurance-shaped framing (spec §7): the pitch is
 /// computed from the user's own vault — the dollars they have on the line
-/// right now — and the AI-extraction copy branches on whether the device can
-/// actually run the model.
+/// right now.
+///
+/// Scanning copy is deliberately unconditional. It previously branched on
+/// Apple Intelligence availability and told A16-and-earlier devices that
+/// "this device can't run on-device extraction" — which was false: the scan
+/// path is Vision OCR plus the pure-Swift ReceiptParser and runs everywhere.
+/// The branch sold those users short on a capability they already had.
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -19,8 +24,6 @@ struct PaywallView: View {
         self.store = store
         self.valueInWindowCents = valueInWindowCents
     }
-
-    private var modelAvailable: Bool { ModelAvailability.current.canExtract }
 
     var body: some View {
         NavigationStack {
@@ -69,12 +72,8 @@ struct PaywallView: View {
 
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 12) {
-            benefit(0,
-                    modelAvailable ? "camera.viewfinder" : "keyboard",
-                    modelAvailable ? "Camera + AI receipt extraction" : "Fast manual capture",
-                    modelAvailable
-                        ? "Snap the slip; Tearoff reads merchant, date, total, and terms."
-                        : "This device can't run on-device extraction, so scanning is manual — everything else below is included.")
+            benefit(0, "camera.viewfinder", "Camera receipt scanning",
+                    "Snap the slip; Tearoff reads the merchant, date, total, and return terms straight off it.")
             benefit(1, "shield.lefthalf.filled", "Warranty tracking", "Track manufacturer warranty deadlines alongside returns.")
             benefit(2, "widget.small", "Widgets", "Upcoming deadlines on your Home Screen — with snooze and mark-returned built in.")
             benefit(3, "location", "Proximity reminders", "A nudge when you're back near a store with an open return window.")

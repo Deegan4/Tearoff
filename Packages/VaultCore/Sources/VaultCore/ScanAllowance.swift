@@ -2,7 +2,7 @@ import Foundation
 
 /// How many camera scans a user may still take.
 ///
-/// Camera + AI extraction is a Pro feature (spec §7), but a receipt scanner is
+/// Camera scanning is a Pro feature (spec §7), but a receipt scanner is
 /// a "watch it work once" product — a hard gate asks people to buy a feature
 /// they have never seen. This grants a small lifetime allowance so the paywall
 /// lands *after* the moment that sells it rather than before.

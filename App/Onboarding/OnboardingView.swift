@@ -504,7 +504,7 @@ private struct ProFeatureList: View {
     @State private var shown = false
 
     private let features: [(icon: String, label: String)] = [
-        ("camera.viewfinder", "Camera + AI receipt extraction"),
+        ("camera.viewfinder", "Camera receipt scanning"),
         ("shield.lefthalf.filled", "Warranty tracking"),
         ("widget.small", "Home Screen widgets"),
         ("location", "Proximity reminders"),
