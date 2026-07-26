@@ -64,12 +64,43 @@ final class StoreManager {
         didSet { UserDefaults.standard.set(debugProUnlock, forKey: "tearoff.debugProUnlock") }
     }
 
-    /// Products sorted for display: monthly, yearly, then lifetime.
-    var displayProducts: [Product] {
+    /// Whether the paywall should draw the configured prices instead of the
+    /// ones StoreKit returned. Debug-only, opt-in per launch, and used solely
+    /// to capture the App Store Connect IAP review screenshot — App Store
+    /// Connect will not serve products to StoreKit until that screenshot is on
+    /// file, so there is no live-store route to it.
+    static var isShowingPlaceholderOffers: Bool {
+        #if DEBUG
+        // An environment variable rather than a launch argument: `simctl launch`
+        // swallows `-flag value` pairs, but forwards anything prefixed
+        // `SIMCTL_CHILD_` to the process untouched.
+        return ProcessInfo.processInfo.environment["TEAROFF_PLACEHOLDER_OFFERS"] == "1"
+        #else
+        return false
+        #endif
+    }
+
+    /// Offers sorted for display: monthly, yearly, then lifetime.
+    var displayOffers: [PaywallOffer] {
+        #if DEBUG
+        if Self.isShowingPlaceholderOffers { return PaywallOffer.placeholders }
+        #endif
         let order = [TearoffProduct.proMonthly, TearoffProduct.proYearly, TearoffProduct.proLifetime]
-        return products.sorted {
-            (order.firstIndex(of: $0.id) ?? .max) < (order.firstIndex(of: $1.id) ?? .max)
-        }
+        return products
+            .sorted { (order.firstIndex(of: $0.id) ?? .max) < (order.firstIndex(of: $1.id) ?? .max) }
+            .map(PaywallOffer.init)
+    }
+
+    /// `loadState` as the paywall should read it — placeholder offers are never
+    /// "loading".
+    var offerLoadState: ProductLoadState {
+        Self.isShowingPlaceholderOffers ? .loaded : loadState
+    }
+
+    /// The purchasable product behind an offer, if StoreKit has it. `nil` for a
+    /// placeholder offer, which is why tapping one cannot start a purchase.
+    func product(for offerID: String) -> Product? {
+        products.first { $0.id == offerID }
     }
 
     init() {
