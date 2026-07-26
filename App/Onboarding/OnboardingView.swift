@@ -28,7 +28,7 @@ struct OnboardingView: View {
                 OnboardingPageView(
                     icon: "bell.badge",
                     title: "Get a nudge before it's too late",
-                    subtitle: "Alerts land while there's still time to act, not after the window has already closed.",
+                    subtitle: "Alerts land while there's still time to act — Pro adds a nudge if you're back near the store, too.",
                     isActive: page == 2
                 )
                 .tag(2)
@@ -36,7 +36,7 @@ struct OnboardingView: View {
                 OnboardingPageView(
                     icon: "checkmark.seal",
                     title: "Free forever, Pro when you want it",
-                    subtitle: "Manual receipts, alerts, and your full vault are free. Pro adds camera + AI extraction, warranty tracking, export, and widgets.",
+                    subtitle: "Manual receipts, alerts, and your full vault are free. Pro adds camera + AI extraction, warranty tracking, proximity reminders, direct return links, and export — CSV or a yearly PDF report.",
                     isActive: page == 3
                 )
                 .tag(3)
