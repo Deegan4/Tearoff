@@ -73,8 +73,10 @@ struct PaywallView: View {
                         ? "Snap the slip; Tearoff reads merchant, date, total, and terms."
                         : "This device can't run on-device extraction, so scanning is manual — everything else below is included.")
             benefit("shield.lefthalf.filled", "Warranty tracking", "Track manufacturer warranty deadlines alongside returns.")
-            benefit("square.and.arrow.up", "Export", "Get your vault out as a shareable record any time.")
-            benefit("widget.small", "Widgets", "Upcoming deadlines on your Home Screen.")
+            benefit("widget.small", "Widgets", "Upcoming deadlines on your Home Screen — with snooze and mark-returned built in.")
+            benefit("location", "Proximity reminders", "A nudge when you're back near a store with an open return window.")
+            benefit("arrow.up.forward.app", "Direct return links", "One tap straight to a retailer's returns page, not a search.")
+            benefit("square.and.arrow.up", "Export", "Your vault as a CSV, or a yearly PDF report of spend and deadlines.")
         }
     }
 

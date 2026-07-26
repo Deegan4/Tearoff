@@ -21,6 +21,7 @@ struct VaultView: View {
     @State private var sort: SortOption = .dateNewest
     @State private var showingSettings = false
     @State private var showingPaywall = false
+    @AppStorage("proximityRemindersEnabled") private var proximityRemindersEnabled = false
     /// Observed so Siri / Shortcuts intents can drive navigation.
     private let router = IntentRouter.shared
     @Namespace private var heroNS
@@ -140,7 +141,12 @@ struct VaultView: View {
             // A widget "Mark returned" tap only queues the change; apply it when
             // the app comes forward so SwiftData and the alerts stay in sync.
             .onChange(of: scenePhase) { _, phase in
-                if phase == .active { drainPendingReturns() }
+                if phase == .active {
+                    drainPendingReturns()
+                    if store.isPro && proximityRemindersEnabled {
+                        Task { await ProximityReminder.shared.checkNearbyStores(purchases: purchases) }
+                    }
+                }
             }
             .onChange(of: digestSignature) {
                 WidgetBridge.publish(purchases, isPro: store.isPro)
@@ -239,6 +245,23 @@ struct VaultView: View {
         }
         // Clear only what we saw, so a tap that lands mid-drain isn't dropped.
         queue.remove(ids)
+        drainPendingSnoozes()
+    }
+
+    /// Apply any "Snooze" taps queued from the widget: push that purchase's
+    /// return reminder out to the requested date.
+    private func drainPendingSnoozes() {
+        let queue = PendingSnoozeStore()
+        let entries = queue.pending()
+        guard !entries.isEmpty else { return }
+        let byID = Dictionary(uniqueKeysWithValues: entries.map { ($0.purchaseID, $0.until) })
+        for purchase in purchases where !purchase.status.isResolved {
+            guard let until = byID[purchase.id.uuidString] else { continue }
+            let id = purchase.id
+            let merchant = purchase.merchant
+            Task { await NotificationScheduler.shared.snoozeReturn(purchaseID: id, merchant: merchant, until: until) }
+        }
+        queue.remove(entries.map(\.purchaseID))
     }
 
     /// Delete swiped rows: cancel their pending alerts, drop the detail

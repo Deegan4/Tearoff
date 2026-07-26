@@ -152,6 +152,8 @@ struct DeadlinesWidgetView: View {
                         .monospacedDigit()
                         .contentTransition(.numericText())
                     if d.kind == .returnWindow, let pid = d.purchaseID {
+                        snoozeButton(pid, label: "Snooze \(d.merchant) reminder")
+                            .font(.callout)
                         markReturnedButton(pid, label: "Mark \(d.merchant) returned")
                             .font(.callout)
                     }
@@ -169,6 +171,19 @@ struct DeadlinesWidgetView: View {
             Image(systemName: "checkmark.circle.fill")
                 .symbolRenderingMode(.hierarchical)
                 .foregroundStyle(.green)
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
+    }
+
+    /// Pro-only: pushes the return *reminder* out 3 days without touching the
+    /// real deadline. Naturally gated with the rest of the widget, since free
+    /// users never see real rows to snooze in the first place.
+    private func snoozeButton(_ purchaseID: String, label: String) -> some View {
+        Button(intent: SnoozeIntent(purchaseID: purchaseID)) {
+            Image(systemName: "clock.arrow.circlepath")
+                .symbolRenderingMode(.hierarchical)
+                .foregroundStyle(.orange)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(label)

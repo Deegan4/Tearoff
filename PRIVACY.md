@@ -32,6 +32,15 @@ camera is used **only** while you are actively scanning. Scanned images are
 processed on your device (including text recognition) and stored with the
 matching purchase. Images are not uploaded to us.
 
+## Location
+
+On the Pro tier, Tearoff can optionally use your location to tag a purchase
+with its store and to notify you if you're nearby later with the return
+window still open. This is opt-in (off by default), checked only while the
+app is open in the foreground, and never runs in the background. Your
+location is never stored beyond the one coordinate you choose to save with a
+purchase, and it is never transmitted anywhere.
+
 ## Diagnostics
 
 Tearoff keeps a small, **counts-only** accuracy ledger on your device to gauge

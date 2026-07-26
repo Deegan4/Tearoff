@@ -44,6 +44,19 @@ actor NotificationScheduler {
         }
     }
 
+    /// Push the return reminder (not the deadline itself) out to a new date,
+    /// replacing whatever return reminder was pending. Used by the widget's
+    /// Pro-only "Snooze" button.
+    func snoozeReturn(purchaseID: UUID, merchant: String, until: Date) async {
+        center.removePendingNotificationRequests(withIdentifiers: [identifier(purchaseID, "return")])
+        await add(
+            id: identifier(purchaseID, "return"),
+            title: "Return window closing",
+            body: "Your \(merchant) return window is still open.",
+            fireDate: until
+        )
+    }
+
     func cancel(purchaseID: UUID) async {
         center.removePendingNotificationRequests(withIdentifiers: [
             identifier(purchaseID, "return"),

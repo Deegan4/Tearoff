@@ -17,6 +17,9 @@ struct SettingsView: View {
     @State private var showingPaywall = false
     /// Same key the app root reads, so the choice applies immediately.
     @AppStorage(AppearanceMode.storageKey) private var appearance: AppearanceMode = .system
+    /// Pro feature: nudge the user when they're near a store with an open
+    /// return window. Off by default — this is an opt-in, not a surprise.
+    @AppStorage("proximityRemindersEnabled") private var proximityRemindersEnabled = false
 
     private var ledger: AccuracyLedger { telemetry.ledger }
 
@@ -43,6 +46,7 @@ struct SettingsView: View {
                 }
                 #endif
                 appearanceSection
+                proximitySection
                 if !purchases.isEmpty { insightsSection }
                 exportSection
                 Section {
@@ -157,6 +161,39 @@ struct SettingsView: View {
         }
     }
 
+    // MARK: Proximity reminders (Pro)
+
+    @ViewBuilder
+    private var proximitySection: some View {
+        Section {
+            if store.isPro {
+                Toggle("Remind me near a store", isOn: Binding(
+                    get: { proximityRemindersEnabled },
+                    set: { on in
+                        proximityRemindersEnabled = on
+                        if on { ProximityReminder.shared.requestAuthorization() }
+                    }))
+            } else {
+                Button { showingPaywall = true } label: {
+                    HStack {
+                        Text("Remind me near a store")
+                        Spacer()
+                        Text("Pro")
+                            .font(.caption2.weight(.semibold))
+                            .padding(.horizontal, 6).padding(.vertical, 2)
+                            .background(.tint.opacity(0.15), in: Capsule())
+                    }
+                }
+            }
+        } header: {
+            Text("Proximity")
+        } footer: {
+            Text(store.isPro
+                 ? "A quick nudge when you're near a store with an open return window. Your location is checked only while the app is open and is never stored or sent anywhere."
+                 : "Get a nudge when you're near a store with an open return window — Pro feature.")
+        }
+    }
+
     // MARK: Export (Pro)
 
     @ViewBuilder
@@ -167,6 +204,12 @@ struct SettingsView: View {
                     exportedFile = VaultExporter.writeCSV(purchases).map(ExportedFile.init)
                 } label: {
                     Label("Export vault (CSV)", systemImage: "square.and.arrow.up")
+                }
+                .disabled(purchases.isEmpty)
+                Button {
+                    exportedFile = VaultExporter.writePDFReport(purchases).map(ExportedFile.init)
+                } label: {
+                    Label("Year in Review (PDF)", systemImage: "doc.richtext")
                 }
                 .disabled(purchases.isEmpty)
             } else {

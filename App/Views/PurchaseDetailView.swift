@@ -6,12 +6,14 @@ import VaultCore
 struct PurchaseDetailView: View {
     @Environment(\.modelContext) private var context
     @Environment(\.dismiss) private var dismiss
+    @Environment(StoreManager.self) private var store
 
     let purchase: StoredPurchase
     @State private var isEditing = false
     @State private var confirmDelete = false
     @State private var actionMessage: String?
     @State private var proof: Image?
+    @State private var showingPaywall = false
     @Environment(\.displayScale) private var displayScale
     // A single cover slot: presenting two `.fullScreenCover` modifiers on one
     // view is a SwiftUI bug where the second blocks the first from dismissing,
@@ -171,6 +173,9 @@ struct PurchaseDetailView: View {
         .sheet(isPresented: $isEditing) {
             AddPurchaseView(editing: purchase)
         }
+        .sheet(isPresented: $showingPaywall) {
+            PaywallView(store: store, valueInWindowCents: purchase.totalCents.raw)
+        }
         .fullScreenCover(item: $cover) { which in
             switch which {
             case .receipt:
@@ -203,13 +208,29 @@ struct PurchaseDetailView: View {
            let window = ResolverStore.shared.returnWindow(for: purchase),
            window.deadline >= Calendar.current.startOfDay(for: .now) {
             Section("Start your return") {
-                if let url = RetailerLinks.returnsURL(forMerchant: purchase.merchant) {
+                // The curated direct-to-retailer deep link is the Pro perk;
+                // free users still get the generic search fallback for
+                // unknown merchants, same as before this was gated.
+                if RetailerLinks.isKnown(purchase.merchant) {
+                    if store.isPro, let url = RetailerLinks.returnsURL(forMerchant: purchase.merchant) {
+                        Link(destination: url) {
+                            Label("Open \(purchase.merchant) returns page", systemImage: "arrow.up.forward.app")
+                        }
+                    } else {
+                        Button { showingPaywall = true } label: {
+                            HStack {
+                                Label("Open \(purchase.merchant) returns page", systemImage: "arrow.up.forward.app")
+                                Spacer()
+                                Text("Pro")
+                                    .font(.caption2.weight(.semibold))
+                                    .padding(.horizontal, 6).padding(.vertical, 2)
+                                    .background(.tint.opacity(0.15), in: Capsule())
+                            }
+                        }
+                    }
+                } else if let url = RetailerLinks.returnsURL(forMerchant: purchase.merchant) {
                     Link(destination: url) {
-                        Label(
-                            RetailerLinks.isKnown(purchase.merchant)
-                                ? "Open \(purchase.merchant) returns page"
-                                : "Search the return policy",
-                            systemImage: "arrow.up.forward.app")
+                        Label("Search the return policy", systemImage: "arrow.up.forward.app")
                     }
                 }
                 if !purchase.orderNumber.isEmpty {

@@ -64,6 +64,13 @@ final class StoredPurchase {
     /// SwiftData store stays small; `nil` for manually-entered purchases.
     @Attribute(.externalStorage) var receiptImageData: Data?
 
+    /// Where this merchant's store is, so the Pro geofence reminder can nudge
+    /// the user when they're nearby with the return window still open. Set
+    /// once from the user's current location at save time; `nil` means no
+    /// reminder is possible for this purchase.
+    var storeLatitude: Double?
+    var storeLongitude: Double?
+
     init(
         merchant: String,
         purchaseDate: Date,

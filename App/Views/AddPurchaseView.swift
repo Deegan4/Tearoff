@@ -39,6 +39,11 @@ struct AddPurchaseView: View {
 
     @State private var printed: StoredPurchase?
 
+    // Pro feature: the store's location, for the proximity reminder.
+    @State private var storeLatitude: Double?
+    @State private var storeLongitude: Double?
+    @State private var isLocatingStore = false
+
     private let editing: StoredPurchase?
     private let fromScan: Bool
     /// Set only on the scan path; carried onto the new record at save time.
@@ -88,6 +93,8 @@ struct AddPurchaseView: View {
         _printedWarrantyMonths = State(initialValue: prefill?.printedWarrantyMonths ?? 12)
         _userWarrantyOn = State(initialValue: false)
         _userWarrantyMonths = State(initialValue: 12)
+        _storeLatitude = State(initialValue: nil)
+        _storeLongitude = State(initialValue: nil)
     }
 
     /// Edit an existing purchase in place.
@@ -115,6 +122,8 @@ struct AddPurchaseView: View {
         _printedWarrantyMonths = State(initialValue: purchase.printedWarrantyMonths ?? 12)
         _userWarrantyOn = State(initialValue: purchase.userWarrantyMonths != nil)
         _userWarrantyMonths = State(initialValue: purchase.userWarrantyMonths ?? 12)
+        _storeLatitude = State(initialValue: purchase.storeLatitude)
+        _storeLongitude = State(initialValue: purchase.storeLongitude)
     }
 
     private static func amountString(_ cents: Cents?) -> String {
@@ -178,6 +187,7 @@ struct AddPurchaseView: View {
 
                 if category.isReturnable {
                     returnSection
+                    if store.isPro { storeLocationSection }
                     // Warranty tracking is a Pro feature; free users see an
                     // upsell instead of the warranty controls.
                     if store.isPro {
@@ -289,6 +299,41 @@ struct AddPurchaseView: View {
         }
     }
 
+    /// Pro feature: tag the purchase with the store's location so Settings'
+    /// "Remind me near a store" toggle has something to check against.
+    private var storeLocationSection: some View {
+        Section {
+            Button {
+                Task {
+                    isLocatingStore = true
+                    defer { isLocatingStore = false }
+                    if let coordinate = await ProximityReminder.shared.captureCurrentLocation() {
+                        storeLatitude = coordinate.latitude
+                        storeLongitude = coordinate.longitude
+                    }
+                }
+            } label: {
+                if isLocatingStore {
+                    ProgressView().frame(maxWidth: .infinity)
+                } else {
+                    Label(storeLatitude == nil ? "Set store location" : "Update store location",
+                          systemImage: "location")
+                }
+            }
+            .disabled(isLocatingStore)
+            if storeLatitude != nil {
+                Button("Clear store location", role: .destructive) {
+                    storeLatitude = nil
+                    storeLongitude = nil
+                }
+            }
+        } header: {
+            Text("Store location")
+        } footer: {
+            Text("Set this while you're at the store. Enables a nudge if you're back nearby with the return window still open.")
+        }
+    }
+
     private var warrantySection: some View {
         Section {
             Toggle("Printed on receipt", isOn: $printedWarrantyOn)
@@ -363,6 +408,10 @@ struct AddPurchaseView: View {
             target.barcode = barcode.trimmingCharacters(in: .whitespaces)
             context.insert(target)
         }
+
+        // Store location is Pro-gated, same as warranty tracking below.
+        target.storeLatitude = store.isPro ? storeLatitude : nil
+        target.storeLongitude = store.isPro ? storeLongitude : nil
 
         // Warranty tracking is Pro-gated: free users never persist a warranty
         // term or receive warranty alerts, even if a scan pre-armed one.
