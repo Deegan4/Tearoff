@@ -249,6 +249,15 @@ struct AddPurchaseView: View {
                     TextField("Optional", text: $note, axis: .vertical)
                 }
             }
+            // Whole sections enter and leave this form as the category, Pro
+            // state, and scan results change. Un-animated, they pop in hard
+            // enough to read as a glitch — these scope the motion to just the
+            // values that restructure the form.
+            .animation(Motion.premium, value: category.isReturnable)
+            .animation(Motion.premium, value: store.isPro)
+            .animation(Motion.snappy, value: isLocatingStore)
+            .animation(Motion.snappy, value: storeLatitude != nil)
+            .animation(Motion.snappy, value: lineItems.count)
             .navigationTitle(title)
             // A sheet, not a second fullScreenCover, so it never conflicts with
             // the receipt cover on this same view.

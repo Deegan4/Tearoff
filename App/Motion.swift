@@ -39,3 +39,25 @@ extension View {
     /// Cascading fade-and-lift entrance. Pass the element's position.
     func staggeredAppear(_ index: Int) -> some View { modifier(StaggeredAppear(index: index)) }
 }
+
+/// Press feedback for card-shaped buttons. `.buttonStyle(.plain)` renders a
+/// tappable card with *no* pressed state at all, which reads as broken on a
+/// primary action; this restores a weighted press without the default button
+/// chrome. The scale is gated on Reduce Motion — SwiftUI does not disable
+/// custom animations automatically — while the opacity dip always applies, so
+/// the press stays perceivable either way.
+struct PressableCardButtonStyle: ButtonStyle {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
+            .opacity(configuration.isPressed ? 0.88 : 1)
+            .animation(Motion.snappy, value: configuration.isPressed)
+    }
+}
+
+extension ButtonStyle where Self == PressableCardButtonStyle {
+    /// Card press feedback — use instead of `.plain` on tappable cards.
+    static var pressableCard: PressableCardButtonStyle { .init() }
+}

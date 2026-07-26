@@ -1,4 +1,5 @@
 import SwiftUI
+import VaultCore
 
 /// First-launch introduction. Shown once via `.hasCompletedOnboarding`;
 /// swipeable pages walk through the core loop (track → print → alert) before
@@ -21,29 +22,29 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 TabView(selection: $page) {
                     OnboardingPage(
-                        title: "You own this jacket now",
-                        subtitle: "It didn't fit. The receipt went in a drawer. The window closed on Tuesday. Congratulations on your $84 jacket, forever.",
+                        title: "You own this now",
+                        subtitle: "It wasn't right. The receipt went in a drawer. The window closed on Tuesday. Congratulations — it's yours forever.",
                         isActive: page == 0
                     ) { ExpiredReceiptMock(isActive: page == 0) }
                         .tag(0)
 
                     OnboardingPage(
-                        title: "So we built a tiny printer",
-                        subtitle: "Every purchase gets its own slip, with the deadline printed right on it. Was this necessary? No. Is it satisfying? Absolutely.",
+                        title: "Now you know the exact day",
+                        subtitle: "Tearoff reads the receipt, checks the store's policy, and prints the day your window shuts. No more \"I think it's thirty days?\"",
                         isActive: page == 1
                     ) { MiniReceiptPrinter(isActive: page == 1) }
                         .tag(1)
 
                     OnboardingPage(
                         title: "Then we nag you. Politely.",
-                        subtitle: "A nudge while you can still do something about it — not a respectful moment of silence after the window closes.",
+                        subtitle: "A nudge while you can still walk back into the store — not a respectful moment of silence after the window closes.",
                         isActive: page == 2
                     ) { AlertBannerMock(isActive: page == 2) }
                         .tag(2)
 
                     OnboardingPage(
                         title: "Free forever. Pro if you're fancy.",
-                        subtitle: "Your receipts, alerts, and full vault cost nothing, always. Pro just does the typing for you.",
+                        subtitle: "Receipts, deadlines, and alerts cost nothing — that's the app, not a trial. Pro does the typing for you, and your first \(ScanAllowance.freeLimit) scans are on the house.",
                         isActive: page == 3
                     ) { ProFeatureList(isActive: page == 3) }
                         .tag(3)
@@ -100,17 +101,68 @@ private struct OnboardingBackdrop: View {
         }
     }
 
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         ZStack {
             Color(.systemBackground)
+
+            // A mesh gradient drifts like weather instead of sitting still —
+            // it gives the flat pages depth without competing with the
+            // product mockups, which are the actual subject.
+            if reduceMotion {
+                mesh(phase: 0)
+            } else {
+                TimelineView(.animation) { context in
+                    mesh(phase: context.date.timeIntervalSinceReferenceDate)
+                }
+            }
+
+            // Darkened edges pull the eye to the centre where the mockup and
+            // copy live.
             RadialGradient(
-                colors: [tint.opacity(0.28), tint.opacity(0.04), .clear],
-                center: .top, startRadius: 8, endRadius: 460
+                colors: [.clear, .black.opacity(0.28)],
+                center: .center, startRadius: 200, endRadius: 560
             )
             .ignoresSafeArea()
+            .allowsHitTesting(false)
         }
         .animation(.easeInOut(duration: 0.55), value: page)
         .ignoresSafeArea()
+    }
+
+    /// 3×3 mesh, top-weighted in the page tint and fading to nothing at the
+    /// bottom. Only the edge midpoints and centre drift — the four corners are
+    /// pinned, since moving those warps the whole field rather than stirring it.
+    private func mesh(phase: TimeInterval) -> some View {
+        func drift(_ seed: Double, _ amplitude: Float) -> Float {
+            Float(sin(phase * 0.22 + seed)) * amplitude
+        }
+
+        return MeshGradient(
+            width: 3,
+            height: 3,
+            points: [
+                SIMD2<Float>(0, 0),
+                SIMD2<Float>(0.5 + drift(0, 0.07), 0),
+                SIMD2<Float>(1, 0),
+
+                SIMD2<Float>(0, 0.45 + drift(1.7, 0.05)),
+                SIMD2<Float>(0.5 + drift(3.1, 0.09), 0.5 + drift(4.6, 0.07)),
+                SIMD2<Float>(1, 0.55 + drift(2.4, 0.05)),
+
+                SIMD2<Float>(0, 1),
+                SIMD2<Float>(0.5 + drift(5.2, 0.06), 1),
+                SIMD2<Float>(1, 1),
+            ],
+            colors: [
+                tint.opacity(0.50), tint.opacity(0.38), tint.opacity(0.22),
+                tint.opacity(0.26), tint.opacity(0.16), tint.opacity(0.08),
+                .clear, .clear, .clear,
+            ]
+        )
+        .ignoresSafeArea()
+        .allowsHitTesting(false)
     }
 }
 
@@ -127,8 +179,25 @@ private struct OnboardingPage<Visual: View>: View {
             Spacer(minLength: 0)
             visual
                 .frame(height: 290)
+                // Pool of light under the mockup so it reads as sitting *in*
+                // the scene rather than pasted on top of a flat field.
+                .background {
+                    Ellipse()
+                        .fill(
+                            RadialGradient(
+                                colors: [.white.opacity(0.16), .clear],
+                                center: .center, startRadius: 2, endRadius: 190
+                            )
+                        )
+                        .frame(height: 240)
+                        .blur(radius: 26)
+                        .opacity(isActive ? 1 : 0)
+                        .allowsHitTesting(false)
+                }
                 .scaleEffect(isActive ? 1 : 0.92)
                 .opacity(isActive ? 1 : 0)
+                // Incoming pages settle up into place; outgoing ones sink.
+                .offset(y: isActive ? 0 : 10)
                 .animation(Motion.alive, value: isActive)
             // Fixed gap so the visual and its caption read as one unit; the
             // flexible space all lives outside the pair.
@@ -161,11 +230,33 @@ private struct OnboardingPage<Visual: View>: View {
 private struct ExpiredReceiptMock: View {
     let isActive: Bool
 
+    /// One "you missed it" scenario. A single canned example on repeat reads
+    /// as a screenshot; rotating through categories and price points makes the
+    /// problem feel like something that happens to *everyone*, repeatedly.
+    struct Scenario {
+        let merchant: String
+        let item: String
+        let price: String
+    }
+
+    static let scenarios: [Scenario] = [
+        .init(merchant: "Northline Outfitters", item: "Wool jacket — one size too small", price: "$84.00"),
+        .init(merchant: "Best Buy", item: "Soundbar — sounded better in the store", price: "$249.99"),
+        .init(merchant: "IKEA", item: "Desk lamp — wrong shade of white", price: "$39.00"),
+        .init(merchant: "The Home Depot", item: "Tile saw — job finished without it", price: "$159.00"),
+        .init(merchant: "Nordstrom", item: "Boots — they pinch", price: "$129.00"),
+    ]
+
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var daysLeft = 3
     @State private var expired = false
     @State private var stampShown = false
+    @State private var scenarioIndex = 0
     @State private var loopTask: Task<Void, Never>?
+
+    private var scenario: Scenario {
+        Self.scenarios[scenarioIndex % Self.scenarios.count]
+    }
 
     var body: some View {
         ZStack {
@@ -184,16 +275,20 @@ private struct ExpiredReceiptMock: View {
     private var card: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("Northline Outfitters")
+                Text(scenario.merchant)
                     .font(.subheadline.weight(.semibold))
                     .lineLimit(1)
+                    .contentTransition(.opacity)
                 Spacer(minLength: 8)
-                Text("$84.00")
+                Text(scenario.price)
                     .font(.subheadline.monospacedDigit())
+                    .contentTransition(.opacity)
             }
-            Text("Wool jacket — one size too small")
+            Text(scenario.item)
                 .font(.caption)
                 .foregroundStyle(.secondary)
+                .lineLimit(2)
+                .contentTransition(.opacity)
 
             Divider().opacity(0.5)
 
@@ -261,6 +356,11 @@ private struct ExpiredReceiptMock: View {
                     stampShown = true
                 }
                 try? await Task.sleep(for: .seconds(2.4))
+
+                // Advance only at the end of a full cycle, so the first thing
+                // a new user sees is scenario 0 and the swap always lands
+                // between rounds rather than mid-countdown.
+                withAnimation(Motion.premium) { scenarioIndex += 1 }
             }
         }
     }
@@ -280,8 +380,34 @@ private struct ExpiredReceiptMock: View {
 /// on a loop — the actual thing the user will see on their lock screen.
 private struct AlertBannerMock: View {
     let isActive: Bool
+
+    /// One alert the app actually sends. Rotating these shows the range —
+    /// returns *and* warranties, a comfortable heads-up *and* a last-day
+    /// warning — instead of implying Tearoff only ever says one thing.
+    struct Alert {
+        let title: String
+        let body: String
+    }
+
+    static let alerts: [Alert] = [
+        .init(title: "Return window closing",
+              body: "Your Northline Outfitters return window closes in 3 days."),
+        .init(title: "Last day to return",
+              body: "Today is the final day to return the IKEA desk lamp."),
+        .init(title: "Return window closing",
+              body: "Best Buy — 2 days left to return the soundbar."),
+        .init(title: "Warranty expiring",
+              body: "Your Home Depot tile saw's warranty ends in 30 days."),
+    ]
+
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var shown = false
+    @State private var alertIndex = 0
     @State private var loopTask: Task<Void, Never>?
+
+    private var alert: Alert {
+        Self.alerts[alertIndex % Self.alerts.count]
+    }
 
     var body: some View {
         // Centered in the visual slot (rather than pinned to the top) so the
@@ -319,12 +445,14 @@ private struct AlertBannerMock: View {
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 }
-                Text("Return window closing")
+                Text(alert.title)
                     .font(.subheadline.weight(.semibold))
-                Text("Your Northline Outfitters return window closes in 3 days.")
+                    .contentTransition(.opacity)
+                Text(alert.body)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
+                    .contentTransition(.opacity)
             }
         }
         .padding(12)
@@ -339,13 +467,23 @@ private struct AlertBannerMock: View {
 
     private func start() {
         guard loopTask == nil else { return }
+        // Reduce Motion: show one banner, already landed. A 140pt slide is
+        // exactly the kind of movement the setting exists to suppress.
+        if reduceMotion {
+            shown = true
+            return
+        }
         loopTask = Task { @MainActor in
             while !Task.isCancelled {
                 shown = true
                 try? await Task.sleep(for: .seconds(2.6))
                 if Task.isCancelled { break }
                 shown = false
-                try? await Task.sleep(for: .seconds(0.9))
+                // Swap the content only once the banner has slid off-screen,
+                // so the text never visibly morphs in place.
+                try? await Task.sleep(for: .seconds(0.55))
+                alertIndex += 1
+                try? await Task.sleep(for: .seconds(0.35))
             }
         }
     }

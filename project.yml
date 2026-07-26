@@ -29,7 +29,7 @@ targets:
           - CloudKit
         com.apple.developer.icloud-container-identifiers:
           - iCloud.com.tearoff.app
-        aps-environment: development
+        aps-environment: production
     info:
       path: App/Info.plist
       properties:
@@ -38,6 +38,8 @@ targets:
         NSRemindersFullAccessUsageDescription: Tearoff adds a reminder on your return deadline so you don't miss the window.
         NSLocationWhenInUseUsageDescription: Tearoff checks your location only while the app is open, to tag a store when you save a purchase and to nudge you if you're back nearby with an open return window. Your location is never stored or sent anywhere.
         NSSupportsLiveActivities: true
+        ITSAppUsesNonExemptEncryption: false
+        CFBundleVersion: "4"
         UIBackgroundModes:
           - remote-notification
         UILaunchScreen: {}
@@ -81,6 +83,7 @@ targets:
       path: TearoffWidgets/Info.plist
       properties:
         CFBundleDisplayName: Tearoff
+        CFBundleVersion: "4"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:

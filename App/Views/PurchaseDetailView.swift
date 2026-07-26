@@ -39,6 +39,9 @@ struct PurchaseDetailView: View {
                 .pickerStyle(.menu)
             }
             .staggeredAppear(0)
+            // Completes the success moment with a physical confirmation, not
+            // just a visual one.
+            .sensoryFeedback(.success, trigger: purchase.status)
 
             Section("Purchase") {
                 LabeledContent("Merchant", value: purchase.merchant)
@@ -277,7 +280,10 @@ struct PurchaseDetailView: View {
     /// Change lifecycle status. Resolving cancels pending alerts; reactivating
     /// reschedules them from the current windows.
     private func setStatus(_ status: PurchaseStatus) {
-        purchase.status = status
+        // Resolving a purchase removes the whole "Start your return" section;
+        // animate so the form restructures rather than jumping. This is the
+        // app's success moment — the deadline was caught in time.
+        withAnimation(Motion.premium) { purchase.status = status }
         let id = purchase.id
         if status.isResolved {
             Task { await NotificationScheduler.shared.cancel(purchaseID: id) }

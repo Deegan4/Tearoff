@@ -26,6 +26,10 @@ struct VaultView: View {
     /// The vault itself stays unlimited on Free; see the design note above
     /// `scanUpsellThreshold`.
     @AppStorage("hasSeenScanUpsell") private var hasSeenScanUpsell = false
+    /// Lifetime count of free scans spent. Device-local on purpose: it is not
+    /// synced, so it is not a licence — it exists to let the extraction sell
+    /// itself once, not to be defended against a reinstall.
+    @AppStorage("freeScansUsed") private var freeScansUsed = 0
     /// Observed so Siri / Shortcuts intents can drive navigation.
     private let router = IntentRouter.shared
     @Namespace private var heroNS
@@ -70,6 +74,17 @@ struct VaultView: View {
         !store.isPro && !hasSeenScanUpsell && manualEntryCount >= scanUpsellThreshold
     }
 
+    /// Free users get a few lifetime scans before the paywall, so the camera
+    /// gets to prove itself first. See `ScanAllowance` for the reasoning.
+    private var allowance: ScanAllowance {
+        ScanAllowance(isPro: store.isPro, freeScansUsed: freeScansUsed)
+    }
+
+    /// Opens the camera if there's an allowance left, else the paywall.
+    private func startScanOrPaywall() {
+        if allowance.canScan { isScanning = true } else { showingPaywall = true }
+    }
+
     /// The `@Query` fetches everything; search and sort are applied in memory.
     /// A personal receipt vault is small enough that this stays cheap and
     /// keeps the query itself simple.
@@ -88,6 +103,9 @@ struct VaultView: View {
             List(selection: $selection) {
                 if shouldShowScanUpsell {
                     scanUpsellRow
+                }
+                if allowance.shouldShowRemainingCount, let left = allowance.remaining {
+                    freeScansRow(left)
                 }
                 ForEach(visiblePurchases) { purchase in
                     NavigationLink(value: purchase) {
@@ -138,11 +156,10 @@ struct VaultView: View {
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     if ReceiptCamera.isAvailable {
-                        // Camera scan is a Pro feature; free users get the
-                        // paywall instead of the camera.
-                        Button("Scan", systemImage: "camera") {
-                            if store.isPro { isScanning = true } else { showingPaywall = true }
-                        }
+                        // Camera scan is a Pro feature, but free users get a
+                        // small lifetime allowance first — the paywall lands
+                        // once the extraction has shown what it does.
+                        Button("Scan", systemImage: "camera") { startScanOrPaywall() }
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
@@ -184,7 +201,7 @@ struct VaultView: View {
             .onChange(of: router.pendingRoute) { _, route in
                 switch route {
                 case .add: isAdding = true
-                case .scan: if store.isPro { isScanning = true } else { showingPaywall = true }
+                case .scan: startScanOrPaywall()
                 case nil: break
                 }
                 if route != nil { router.pendingRoute = nil }
@@ -245,6 +262,11 @@ struct VaultView: View {
             return
         }
 
+        // Only spend a free scan once extraction actually reached the confirm
+        // step. Both failure paths above return early, so a scan that couldn't
+        // be read (bad light, unreadable slip) costs the user nothing.
+        if !store.isPro { freeScansUsed += 1 }
+
         // OCR runs on the full-resolution capture above; keep a downsampled
         // copy of the same image to store with the record.
         draft = ScanDraft(
@@ -256,6 +278,39 @@ struct VaultView: View {
     /// One-time nudge row: "you've typed N receipts by hand, scanning is
     /// faster" — dismissible, and marked seen either way so it never nags
     /// twice.
+    /// Standing note of how much of the free scan allowance is left. Appears
+    /// only after the first scan, so it reads as what remains of a gift rather
+    /// than as a restriction announced up front.
+    private func freeScansRow(_ left: Int) -> some View {
+        HStack(alignment: .top, spacing: 12) {
+            Image(systemName: left == 0 ? "camera.badge.ellipsis" : "camera.viewfinder")
+                .font(.title3)
+                .foregroundStyle(left == 0 ? AnyShapeStyle(.secondary) : AnyShapeStyle(.tint))
+                .frame(width: 24)
+            VStack(alignment: .leading, spacing: 4) {
+                Text(left == 0
+                     ? "Free scans used up"
+                     : "\(left) free scan\(left == 1 ? "" : "s") left")
+                    .font(.subheadline.weight(.semibold))
+                    .contentTransition(.numericText(countsDown: true))
+                Text(left == 0
+                     ? "Pro keeps scanning unlimited. Typing receipts in by hand stays free forever."
+                     : "Then scanning becomes a Pro feature. Everything you've already saved stays yours.")
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                if left == 0 {
+                    Button("See Pro") { showingPaywall = true }
+                        .font(.caption.weight(.semibold))
+                        .padding(.top, 2)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(.vertical, 4)
+        .listRowBackground(Color.accentColor.opacity(left == 0 ? 0.04 : 0.08))
+        .animation(Motion.snappy, value: left)
+    }
+
     private var scanUpsellRow: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "camera.viewfinder")
@@ -265,15 +320,31 @@ struct VaultView: View {
             VStack(alignment: .leading, spacing: 4) {
                 Text("Typing gets old")
                     .font(.subheadline.weight(.semibold))
-                Text("You've logged \(manualEntryCount) receipts by hand. Pro scans one in about 2 seconds.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                Button("Try Pro scanning") {
-                    hasSeenScanUpsell = true
-                    showingPaywall = true
+                // Don't sell Pro scanning to someone who still has free scans
+                // sitting unused — point them at the camera instead. Selling a
+                // feature the user already has is the fastest way to look like
+                // the app isn't paying attention.
+                if allowance.canScan {
+                    Text("You've logged \(manualEntryCount) receipts by hand. Scanning takes about 2 seconds — you have \(allowance.remaining ?? 0) free.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Scan one instead") {
+                        hasSeenScanUpsell = true
+                        startScanOrPaywall()
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.top, 2)
+                } else {
+                    Text("You've logged \(manualEntryCount) receipts by hand. Pro scans one in about 2 seconds.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                    Button("Try Pro scanning") {
+                        hasSeenScanUpsell = true
+                        showingPaywall = true
+                    }
+                    .font(.caption.weight(.semibold))
+                    .padding(.top, 2)
                 }
-                .font(.caption.weight(.semibold))
-                .padding(.top, 2)
             }
             Spacer(minLength: 0)
             Button {

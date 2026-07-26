@@ -50,4 +50,19 @@ final class ResolverStore {
         }
         return VaultInsights.summary(inputs, now: now)
     }
+
+    /// Where the vault sits on the (purely cosmetic) rank ladder.
+    ///
+    /// `scansConfirmed` comes from the accuracy ledger rather than the vault
+    /// because it is a lifetime running count — a scanned receipt that was
+    /// later deleted still happened. Purchases and returns are read from the
+    /// current vault, so callers that must not demote should feed the result
+    /// through a high-water mark (see `SettingsView.bestXP`).
+    func rankProgress(for purchases: [StoredPurchase], scansConfirmed: Int) -> RankProgress {
+        RankLadder.progress(
+            purchasesTracked: purchases.count,
+            scansConfirmed: scansConfirmed,
+            returnsCompleted: purchases.count { $0.status == .returned || $0.status == .refunded }
+        )
+    }
 }

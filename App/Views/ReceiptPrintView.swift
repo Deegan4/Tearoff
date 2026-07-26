@@ -85,10 +85,8 @@ struct ReceiptPrintView: View {
                     // Dismiss our own cover directly — reliable regardless of
                     // how the presenter is nested — then let the presenter do
                     // any extra teardown (e.g. close the form back to the vault).
-                    NSLog("🧾TEAROFF Done tapped — done=\(done); calling dismiss()+onDone()")
                     dismiss()
                     onDone()
-                    NSLog("🧾TEAROFF Done action finished")
                 } label: {
                     Text(done ? "Done" : "Printing…")
                         .font(.headline)
@@ -262,6 +260,9 @@ struct ReceiptPrintView: View {
         ))
         r.append(AnyView(dashed))
         r.append(AnyView(line("MERCHANT", purchase.merchant.isEmpty ? "—" : purchase.merchant)))
+        if !purchase.orderNumber.isEmpty {
+            r.append(AnyView(line("ORDER #", purchase.orderNumber)))
+        }
         r.append(AnyView(line("DATE", purchase.purchaseDate.formatted(date: .abbreviated, time: .omitted))))
         r.append(AnyView(line("CATEGORY", purchase.category.displayName)))
         r.append(AnyView(dashed))
@@ -343,7 +344,6 @@ struct ReceiptPrintView: View {
     // MARK: - Animation driver
 
     private func startPrinting() {
-        NSLog("🧾TEAROFF startPrinting — progress=\(progress) reduceMotion=\(reduceMotion) paperHeight=\(paperHeight)")
         guard progress == 0 else { return }
         if reduceMotion {
             progress = 1
@@ -377,7 +377,6 @@ struct ReceiptPrintView: View {
             // Stop the feed stepping and drop the tear-off edge.
             withAnimation(.easeOut(duration: 0.15)) { jitter = 0 }
             withAnimation(.easeInOut(duration: 0.2)) { done = true }
-            NSLog("🧾TEAROFF done flipped to true — button now enabled")
             // The freed strip swings once under its own weight and settles —
             // an underdamped pendulum hinged at the slot. Low `bounce` keeps
             // the settle weighted and premium rather than springy-toy.

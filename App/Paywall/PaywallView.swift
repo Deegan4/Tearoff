@@ -8,6 +8,7 @@ import VaultCore
 /// actually run the model.
 struct PaywallView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var store: StoreManager
 
     /// Total value of purchases still inside an open return window, in cents.
@@ -51,6 +52,7 @@ struct PaywallView: View {
             Image(systemName: "checkmark.seal.fill")
                 .font(.largeTitle)
                 .foregroundStyle(.tint)
+                .symbolEffect(.bounce, options: .repeat(.periodic(delay: 3.5)))
             if valueInWindowCents > 0 {
                 Text("\(Cents(valueInWindowCents).formatted(currencyCode: "USD")) of your purchases are still inside a return window.")
                     .font(.title2.weight(.semibold))
@@ -67,20 +69,21 @@ struct PaywallView: View {
 
     private var benefits: some View {
         VStack(alignment: .leading, spacing: 12) {
-            benefit(modelAvailable ? "camera.viewfinder" : "keyboard",
+            benefit(0,
+                    modelAvailable ? "camera.viewfinder" : "keyboard",
                     modelAvailable ? "Camera + AI receipt extraction" : "Fast manual capture",
                     modelAvailable
                         ? "Snap the slip; Tearoff reads merchant, date, total, and terms."
                         : "This device can't run on-device extraction, so scanning is manual — everything else below is included.")
-            benefit("shield.lefthalf.filled", "Warranty tracking", "Track manufacturer warranty deadlines alongside returns.")
-            benefit("widget.small", "Widgets", "Upcoming deadlines on your Home Screen — with snooze and mark-returned built in.")
-            benefit("location", "Proximity reminders", "A nudge when you're back near a store with an open return window.")
-            benefit("arrow.up.forward.app", "Direct return links", "One tap straight to a retailer's returns page, not a search.")
-            benefit("square.and.arrow.up", "Export", "Your vault as a CSV, or a yearly PDF report of spend and deadlines.")
+            benefit(1, "shield.lefthalf.filled", "Warranty tracking", "Track manufacturer warranty deadlines alongside returns.")
+            benefit(2, "widget.small", "Widgets", "Upcoming deadlines on your Home Screen — with snooze and mark-returned built in.")
+            benefit(3, "location", "Proximity reminders", "A nudge when you're back near a store with an open return window.")
+            benefit(4, "arrow.up.forward.app", "Direct return links", "One tap straight to a retailer's returns page, not a search.")
+            benefit(5, "square.and.arrow.up", "Export", "Your vault as a CSV, or a yearly PDF report of spend and deadlines.")
         }
     }
 
-    private func benefit(_ icon: String, _ title: String, _ subtitle: String) -> some View {
+    private func benefit(_ index: Int, _ icon: String, _ title: String, _ subtitle: String) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: icon)
                 .foregroundStyle(.tint)
@@ -91,35 +94,59 @@ struct PaywallView: View {
                 Text(subtitle).font(.caption).foregroundStyle(.secondary)
             }
         }
+        .staggeredAppear(index)
     }
 
     @ViewBuilder
     private var products: some View {
-        if store.displayProducts.isEmpty {
-            ProgressView().frame(maxWidth: .infinity).padding(.vertical)
-        } else {
-            VStack(spacing: 10) {
-                ForEach(store.displayProducts, id: \.id) { product in
-                    Button {
-                        Task { await store.purchase(product) }
-                    } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 2) {
-                                Text(product.displayName).font(.callout.weight(.semibold))
-                                Text(subtitle(for: product)).font(.caption).foregroundStyle(.secondary)
+        // Products load asynchronously, so this swap is on the path of every
+        // paywall open — an un-animated cut here is the most-seen jank in the
+        // app. Fade always; only lift under normal motion settings.
+        Group {
+            if store.displayProducts.isEmpty {
+                ProgressView().frame(maxWidth: .infinity).padding(.vertical)
+                    .transition(.opacity)
+            } else {
+                VStack(spacing: 10) {
+                    ForEach(store.displayProducts, id: \.id) { product in
+                        Button {
+                            Task { await store.purchase(product) }
+                        } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 2) {
+                                    Text(product.displayName).font(.callout.weight(.semibold))
+                                    Text(subtitle(for: product)).font(.caption).foregroundStyle(.secondary)
+                                }
+                                Spacer()
+                                Text(product.displayPrice).font(.callout.weight(.semibold)).monospacedDigit()
                             }
-                            Spacer()
-                            Text(product.displayPrice).font(.callout.weight(.semibold)).monospacedDigit()
+                            .padding()
+                            .frame(maxWidth: .infinity)
+                            .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
                         }
-                        .padding()
-                        .frame(maxWidth: .infinity)
-                        .background(.tint.opacity(0.12), in: RoundedRectangle(cornerRadius: 14))
+                        .buttonStyle(.pressableCard)
+                        .disabled(store.isWorking)
                     }
-                    .buttonStyle(.plain)
-                    .disabled(store.isWorking)
                 }
+                .transition(reduceMotion
+                            ? .opacity
+                            : .opacity.combined(with: .offset(y: 10)))
+                // A purchase in flight is otherwise invisible: `isWorking` only
+                // disabled the buttons, with no signal that a tap registered.
+                .overlay {
+                    if store.isWorking {
+                        ProgressView()
+                            .controlSize(.large)
+                            .padding(20)
+                            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                            .transition(.opacity)
+                            .accessibilityLabel("Completing purchase")
+                    }
+                }
+                .animation(Motion.snappy, value: store.isWorking)
             }
         }
+        .animation(Motion.premium, value: store.displayProducts.isEmpty)
     }
 
     private func subtitle(for product: Product) -> String {

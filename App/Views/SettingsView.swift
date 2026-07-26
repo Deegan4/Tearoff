@@ -13,8 +13,19 @@ struct SettingsView: View {
     @Query private var purchases: [StoredPurchase]
     // Observed so the dashboard reflects new scans live.
     private var telemetry = ExtractionTelemetryStore.shared
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var confirmingReset = false
     @State private var confirmingDeleteAllData = false
+    /// Flipped once on appear so the accuracy bars animate up from zero.
+    @State private var barsFilled = false
+    /// Highest XP ever reached. Current XP is derived from the live vault, so
+    /// deleting receipts would otherwise *demote* you — being punished for
+    /// tidying up is a bad joke. Rank is shown against this high-water mark.
+    @AppStorage("rankBestXP") private var bestXP = 0
+    /// Last rank the user was actually shown, so a promotion is celebrated
+    /// once rather than every time Settings opens.
+    @AppStorage("rankLastSeenLevel") private var lastSeenLevel = 1
+    @State private var levelUp: VaultRank?
     @State private var exportedFile: ExportedFile?
     @State private var showingPaywall = false
     /// Same key the app root reads, so the choice applies immediately.
@@ -22,6 +33,12 @@ struct SettingsView: View {
     /// Pro feature: nudge the user when they're near a store with an open
     /// return window. Off by default — this is an opt-in, not a surprise.
     @AppStorage("proximityRemindersEnabled") private var proximityRemindersEnabled = false
+    #if DEBUG
+    @AppStorage(OnboardingView.storageKey) private var hasCompletedOnboarding = false
+    /// Mirrors the counter VaultView increments on a real scan, so the free
+    /// allowance can be exercised on the Simulator (which has no camera).
+    @AppStorage("freeScansUsed") private var freeScansUsed = 0
+    #endif
 
     private var ledger: AccuracyLedger { telemetry.ledger }
 
@@ -33,6 +50,27 @@ struct SettingsView: View {
     /// Value of purchases still inside an open return window — the paywall pitch.
     private var valueInOpenReturnWindowCents: Int { insights.openReturnValueCents }
 
+    /// Rank measured against the high-water XP, never the momentary vault size.
+    private var rank: RankProgress {
+        let live = ResolverStore.shared.rankProgress(for: purchases, scansConfirmed: ledger.scanCount)
+        return RankLadder.progress(xp: max(live.xp, bestXP))
+    }
+
+    /// Records new XP and surfaces a promotion sheet if a rung was crossed.
+    private func refreshRank() {
+        let live = ResolverStore.shared.rankProgress(for: purchases, scansConfirmed: ledger.scanCount)
+        if live.xp > bestXP { bestXP = live.xp }
+        let current = RankLadder.progress(xp: bestXP).rank
+        guard current.level > lastSeenLevel else {
+            // Keep the marker in step if the ladder is ever retuned downward,
+            // so an old high level cannot suppress a future promotion.
+            lastSeenLevel = min(lastSeenLevel, current.level)
+            return
+        }
+        lastSeenLevel = current.level
+        levelUp = current
+    }
+
     var body: some View {
         NavigationStack {
             Form {
@@ -41,12 +79,30 @@ struct SettingsView: View {
                     Toggle("Unlock Pro (dev)", isOn: Binding(
                         get: { store.debugProUnlock },
                         set: { store.debugProUnlock = $0 }))
+                    Button("Replay Onboarding") {
+                        hasCompletedOnboarding = false
+                        dismiss()
+                    }
+                    // The Simulator has no camera, so the free-scan allowance
+                    // is otherwise untestable without a device. These drive
+                    // the same counter the real scan path increments.
+                    Stepper(
+                        "Free scans used: \(freeScansUsed) / \(ScanAllowance.freeLimit)",
+                        value: $freeScansUsed, in: 0...(ScanAllowance.freeLimit + 1)
+                    )
                 } header: {
                     Text("Developer")
                 } footer: {
                     Text("Dev builds have no purchasable products; this unlocks camera scan, warranty, export, and widgets for testing.")
                 }
                 #endif
+                Section {
+                    RankCard(progress: rank)
+                } header: {
+                    Text("Rank")
+                } footer: {
+                    Text("Cosmetic only — ranks never change a deadline or unlock a feature. Every tracked purchase counts, scanned or typed; completed returns count most.")
+                }
                 appearanceSection
                 proximitySection
                 if !purchases.isEmpty { insightsSection }
@@ -88,6 +144,20 @@ struct SettingsView: View {
                 }
             }
             .navigationTitle("Settings")
+            // Pro state swaps whole rows (proximity, export) and the vault
+            // emptying swaps entire sections — all hard cuts otherwise. The
+            // DEBUG Pro toggle sits directly above these, so the swap is very
+            // visible in development.
+            .animation(Motion.premium, value: store.isPro)
+            .animation(Motion.premium, value: purchases.isEmpty)
+            .animation(Motion.premium, value: ledger.scanCount == 0)
+            .onAppear {
+                barsFilled = true
+                refreshRank()
+            }
+            .fullScreenCover(item: $levelUp) { rank in
+                LevelUpView(rank: rank)
+            }
             .toolbar {
                 ToolbarItem(placement: .confirmationAction) {
                     Button("Done") { dismiss() }
@@ -137,17 +207,36 @@ struct SettingsView: View {
     private var insightsSection: some View {
         let s = insights
         Section {
-            LabeledContent("Tracked purchases", value: "\(s.purchaseCount)")
-            LabeledContent("Total tracked", value: Cents(s.totalTrackedCents).formatted(currencyCode: "USD"))
+            // These recompute live as purchases are added, returned, or
+            // deleted — `.numericText()` rolls the digits instead of swapping
+            // them, matching the countdown treatment in PurchaseRow.
+            LabeledContent("Tracked purchases") {
+                Text("\(s.purchaseCount)")
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
+            LabeledContent("Total tracked") {
+                Text(Cents(s.totalTrackedCents).formatted(currencyCode: "USD"))
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
             LabeledContent("In open return windows") {
                 Text("\(Cents(s.openReturnValueCents).formatted(currencyCode: "USD")) · \(s.openReturnCount) item\(s.openReturnCount == 1 ? "" : "s")")
                     .foregroundStyle(s.openReturnCount > 0 ? .green : .secondary)
                     .monospacedDigit()
+                    .contentTransition(.numericText())
             }
-            LabeledContent("Warranties active", value: "\(s.activeWarrantyCount)")
+            LabeledContent("Warranties active") {
+                Text("\(s.activeWarrantyCount)")
+                    .monospacedDigit()
+                    .contentTransition(.numericText())
+            }
             if s.warrantiesExpiringSoonCount > 0 {
                 LabeledContent("Expiring within 30 days") {
-                    Text("\(s.warrantiesExpiringSoonCount)").foregroundStyle(.orange)
+                    Text("\(s.warrantiesExpiringSoonCount)")
+                        .foregroundStyle(.orange)
+                        .monospacedDigit()
+                        .contentTransition(.numericText())
                 }
             }
         } header: {
@@ -155,6 +244,8 @@ struct SettingsView: View {
         } footer: {
             Text("Money still recoverable and coverage still in force, across your whole vault.")
         }
+        .animation(Motion.snappy, value: s.purchaseCount)
+        .animation(Motion.snappy, value: s.openReturnValueCents)
 
         if !s.topCategories.isEmpty {
             Section("Spending by category") {
@@ -277,8 +368,17 @@ struct SettingsView: View {
                     .font(.callout.weight(.medium))
             }
             if let accuracy {
-                ProgressView(value: accuracy)
+                // Fill from zero on first appearance, staggered down the list.
+                // A bar that is simply *there* at its final length reads as a
+                // label; watching it fill is what makes it read as a measure.
+                ProgressView(value: barsFilled ? accuracy : 0)
                     .tint(accuracyColor(accuracy))
+                    .animation(
+                        reduceMotion
+                            ? nil
+                            : Motion.reveal.delay(Double(fieldIndex(field)) * 0.05),
+                        value: barsFilled
+                    )
                 Text("\(ledger.corrected(field)) corrected of \(ledger.presented(field)) shown")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
@@ -289,6 +389,12 @@ struct SettingsView: View {
             }
         }
         .padding(.vertical, 2)
+    }
+
+    /// Position of a field in the fixed `allCases` order — drives the bar
+    /// fill stagger. Falls back to 0 so a new case can never crash the row.
+    private func fieldIndex(_ field: ExtractionField) -> Int {
+        ExtractionField.allCases.firstIndex(of: field) ?? 0
     }
 
     private func percentText(_ value: Double?) -> String {
