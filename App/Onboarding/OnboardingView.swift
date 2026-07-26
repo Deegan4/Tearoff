@@ -12,8 +12,15 @@ import VaultCore
 struct OnboardingView: View {
     @AppStorage(OnboardingView.storageKey) private var hasCompletedOnboarding = false
     @State private var page = 0
+    /// Which "you missed it" scenario page 1 is showing. Held here so the
+    /// headline, the body copy and the card all change together.
+    @State private var expiredIndex = 0
 
     private let pageCount = 4
+
+    private var expiredScenario: ExpiredReceiptMock.Scenario {
+        ExpiredReceiptMock.scenarios[expiredIndex % ExpiredReceiptMock.scenarios.count]
+    }
 
     var body: some View {
         ZStack {
@@ -22,10 +29,10 @@ struct OnboardingView: View {
             VStack(spacing: 0) {
                 TabView(selection: $page) {
                     OnboardingPage(
-                        title: "You own this now",
-                        subtitle: "It wasn't right. The receipt went in a drawer. The window closed on Tuesday. Congratulations — it's yours forever.",
+                        title: expiredScenario.title,
+                        subtitle: expiredScenario.blurb,
                         isActive: page == 0
-                    ) { ExpiredReceiptMock(isActive: page == 0) }
+                    ) { ExpiredReceiptMock(isActive: page == 0, scenarioIndex: $expiredIndex) }
                         .tag(0)
 
                     OnboardingPage(
@@ -101,68 +108,24 @@ private struct OnboardingBackdrop: View {
         }
     }
 
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var body: some View {
+        // Deliberately plain. An earlier pass layered a drifting mesh
+        // gradient, a vignette and a glow behind the mockups; it read as
+        // generic atmosphere and muddied the one thing worth looking at.
+        // This app's character is deadpan and mechanical — the receipt, the
+        // stamp, the printer. The background's whole job is to stay out of
+        // their way and shift hue enough that pages feel like distinct rooms.
         ZStack {
             Color(.systemBackground)
-
-            // A mesh gradient drifts like weather instead of sitting still —
-            // it gives the flat pages depth without competing with the
-            // product mockups, which are the actual subject.
-            if reduceMotion {
-                mesh(phase: 0)
-            } else {
-                TimelineView(.animation) { context in
-                    mesh(phase: context.date.timeIntervalSinceReferenceDate)
-                }
-            }
-
-            // Darkened edges pull the eye to the centre where the mockup and
-            // copy live.
-            RadialGradient(
-                colors: [.clear, .black.opacity(0.28)],
-                center: .center, startRadius: 200, endRadius: 560
+            LinearGradient(
+                colors: [tint.opacity(0.30), tint.opacity(0.06), .clear],
+                startPoint: .top, endPoint: .center
             )
             .ignoresSafeArea()
             .allowsHitTesting(false)
         }
         .animation(.easeInOut(duration: 0.55), value: page)
         .ignoresSafeArea()
-    }
-
-    /// 3×3 mesh, top-weighted in the page tint and fading to nothing at the
-    /// bottom. Only the edge midpoints and centre drift — the four corners are
-    /// pinned, since moving those warps the whole field rather than stirring it.
-    private func mesh(phase: TimeInterval) -> some View {
-        func drift(_ seed: Double, _ amplitude: Float) -> Float {
-            Float(sin(phase * 0.22 + seed)) * amplitude
-        }
-
-        return MeshGradient(
-            width: 3,
-            height: 3,
-            points: [
-                SIMD2<Float>(0, 0),
-                SIMD2<Float>(0.5 + drift(0, 0.07), 0),
-                SIMD2<Float>(1, 0),
-
-                SIMD2<Float>(0, 0.45 + drift(1.7, 0.05)),
-                SIMD2<Float>(0.5 + drift(3.1, 0.09), 0.5 + drift(4.6, 0.07)),
-                SIMD2<Float>(1, 0.55 + drift(2.4, 0.05)),
-
-                SIMD2<Float>(0, 1),
-                SIMD2<Float>(0.5 + drift(5.2, 0.06), 1),
-                SIMD2<Float>(1, 1),
-            ],
-            colors: [
-                tint.opacity(0.50), tint.opacity(0.38), tint.opacity(0.22),
-                tint.opacity(0.26), tint.opacity(0.16), tint.opacity(0.08),
-                .clear, .clear, .clear,
-            ]
-        )
-        .ignoresSafeArea()
-        .allowsHitTesting(false)
     }
 }
 
@@ -179,21 +142,6 @@ private struct OnboardingPage<Visual: View>: View {
             Spacer(minLength: 0)
             visual
                 .frame(height: 290)
-                // Pool of light under the mockup so it reads as sitting *in*
-                // the scene rather than pasted on top of a flat field.
-                .background {
-                    Ellipse()
-                        .fill(
-                            RadialGradient(
-                                colors: [.white.opacity(0.16), .clear],
-                                center: .center, startRadius: 2, endRadius: 190
-                            )
-                        )
-                        .frame(height: 240)
-                        .blur(radius: 26)
-                        .opacity(isActive ? 1 : 0)
-                        .allowsHitTesting(false)
-                }
                 .scaleEffect(isActive ? 1 : 0.92)
                 .opacity(isActive ? 1 : 0)
                 // Incoming pages settle up into place; outgoing ones sink.
@@ -214,7 +162,8 @@ private struct OnboardingPage<Visual: View>: View {
                     .padding(.horizontal, 28)
                     .staggeredAppear(1)
             }
-            Spacer(minLength: 0)
+            // One spacer each side. Two below pushed the whole page into the
+            // top half and left a dead void under the copy.
             Spacer(minLength: 0)
         }
         .padding(.horizontal)
@@ -237,21 +186,38 @@ private struct ExpiredReceiptMock: View {
         let merchant: String
         let item: String
         let price: String
+        /// The page's headline and body move with the card. Writing one
+        /// generic line to cover every scenario cost the joke its specific
+        /// noun, and the specific noun is what makes it land.
+        let title: String
+        let blurb: String
     }
 
     static let scenarios: [Scenario] = [
-        .init(merchant: "Northline Outfitters", item: "Wool jacket — one size too small", price: "$84.00"),
-        .init(merchant: "Best Buy", item: "Soundbar — sounded better in the store", price: "$249.99"),
-        .init(merchant: "IKEA", item: "Desk lamp — wrong shade of white", price: "$39.00"),
-        .init(merchant: "The Home Depot", item: "Tile saw — job finished without it", price: "$159.00"),
-        .init(merchant: "Nordstrom", item: "Boots — they pinch", price: "$129.00"),
+        .init(merchant: "Northline Outfitters", item: "Wool jacket — one size too small", price: "$84.00",
+              title: "You own this jacket now",
+              blurb: "It didn't fit. The receipt went in a drawer. The window closed on Tuesday. Congratulations on your $84 jacket — forever."),
+        .init(merchant: "Best Buy", item: "Soundbar — sounded better in the store", price: "$249.99",
+              title: "You own this soundbar now",
+              blurb: "It sounded incredible in the shop. It sounds fine in your living room. Fine, for $250, for the rest of your life."),
+        .init(merchant: "IKEA", item: "Desk lamp — wrong shade of white", price: "$39.00",
+              title: "You own this lamp now",
+              blurb: "It's the wrong white. You noticed on day two. You meant to take it back on day three. That was five weeks ago."),
+        .init(merchant: "The Home Depot", item: "Tile saw — job finished without it", price: "$159.00",
+              title: "You own this tile saw now",
+              blurb: "You finished the job without it. It's still in the box, in the garage, where boxes go to become furniture."),
+        .init(merchant: "Nordstrom", item: "Boots — they pinch", price: "$129.00",
+              title: "You own these boots now",
+              blurb: "They pinch. They were always going to pinch. You were going to take them back on Saturday, and then it was March."),
     ]
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var daysLeft = 3
     @State private var expired = false
     @State private var stampShown = false
-    @State private var scenarioIndex = 0
+    /// Owned by OnboardingView so the page's headline and body change in step
+    /// with the card.
+    @Binding var scenarioIndex: Int
     @State private var loopTask: Task<Void, Never>?
 
     private var scenario: Scenario {
