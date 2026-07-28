@@ -102,10 +102,10 @@ struct PaywallView: View {
         // paywall open — an un-animated cut here is the most-seen jank in the
         // app. Fade always; only lift under normal motion settings.
         Group {
-            if store.loadState == .loading {
+            if store.offerLoadState == .loading {
                 ProgressView().frame(maxWidth: .infinity).padding(.vertical)
                     .transition(.opacity)
-            } else if store.displayProducts.isEmpty {
+            } else if store.displayOffers.isEmpty {
                 // Never leave the sheet spinning: say what happened and offer
                 // a way out. An endless spinner reads as a broken app, and the
                 // user has no idea whether to wait or leave.
@@ -135,17 +135,18 @@ struct PaywallView: View {
                 .transition(.opacity)
             } else {
                 VStack(spacing: 10) {
-                    ForEach(store.displayProducts, id: \.id) { product in
+                    ForEach(store.displayOffers) { offer in
                         Button {
+                            guard let product = store.product(for: offer.id) else { return }
                             Task { await store.purchase(product) }
                         } label: {
                             HStack {
                                 VStack(alignment: .leading, spacing: 2) {
-                                    Text(product.displayName).font(.callout.weight(.semibold))
-                                    Text(subtitle(for: product)).font(.caption).foregroundStyle(.secondary)
+                                    Text(offer.displayName).font(.callout.weight(.semibold))
+                                    Text(subtitle(for: offer)).font(.caption).foregroundStyle(.secondary)
                                 }
                                 Spacer()
-                                Text(product.displayPrice).font(.callout.weight(.semibold)).monospacedDigit()
+                                Text(offer.displayPrice).font(.callout.weight(.semibold)).monospacedDigit()
                             }
                             .padding()
                             .frame(maxWidth: .infinity)
@@ -173,15 +174,15 @@ struct PaywallView: View {
                 .animation(Motion.snappy, value: store.isWorking)
             }
         }
-        .animation(Motion.premium, value: store.loadState)
+        .animation(Motion.premium, value: store.offerLoadState)
     }
 
-    private func subtitle(for product: Product) -> String {
-        switch product.id {
+    private func subtitle(for offer: PaywallOffer) -> String {
+        switch offer.id {
         case TearoffProduct.proMonthly: "Billed monthly"
         case TearoffProduct.proYearly: "Billed yearly — best value"
         case TearoffProduct.proLifetime: "One-time — yours forever, Family Sharing"
-        default: product.description
+        default: ""
         }
     }
 
