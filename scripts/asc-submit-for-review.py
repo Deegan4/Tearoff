@@ -6,6 +6,13 @@ Creates a review submission (or reuses an open one), adds the version as an
 item, then marks the submission submitted. Reuses the existing build - this
 uploads nothing.
 
+Before submitting it names any IAP, subscription or subscription group still
+sitting in a blocking state. Those hold the whole submission back, and the API
+hides them behind "Version is not ready to be submitted yet" - which reads like
+a transient delay and is not one. Clearing each takes a press of "Update
+Review" on that purchase's own page in App Store Connect; there is no API for
+it, so the script reports them and refuses to spin.
+
 Prereqs: ASC_KEY_ID, ASC_ISSUER_ID, ASC_PRIVATE_KEY_PATH (pip: pyjwt, cryptography)
 
 Run:
@@ -22,6 +29,13 @@ PLATFORM = "IOS"
 EDITABLE = {"PREPARE_FOR_SUBMISSION", "DEVELOPER_REJECTED", "REJECTED",
             "METADATA_REJECTED", "INVALID_BINARY"}
 OPEN_SUBMISSION = {"READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW", "UNRESOLVED_ISSUES"}
+
+# An IAP, subscription or subscription group left in one of these states after a
+# rejection holds the whole submission back. The API will not say so: it reports
+# only "Version is not ready to be submitted yet", which reads like a transient
+# delay and is not one. Each blocker needs "Update Review" pressed on its own
+# page in App Store Connect to move it back to READY_FOR_REVIEW.
+BLOCKING_ITEM = {"REJECTED", "DEVELOPER_ACTION_NEEDED", "MISSING_METADATA"}
 
 
 def token():
@@ -58,6 +72,54 @@ def die(msg, resp=None):
                            for e in resp.get("errors", [])) or json.dumps(resp)[:600]
         msg = f"{msg}: {detail}"
     sys.exit("ERROR " + msg)
+
+
+def blockers(app_id):
+    """Purchases holding the submission back, as (kind, name, state) tuples.
+
+    The submission item endpoint reports a bare state with no usable
+    relationship, so walk the purchases themselves to get names worth printing.
+    """
+    found = []
+
+    st, r = call("GET", f"/v1/apps/{app_id}/inAppPurchasesV2?limit=200")
+    if st == 200:
+        for i in r.get("data", []):
+            a = i["attributes"]
+            if a.get("state") in BLOCKING_ITEM:
+                found.append(("In-App Purchase", a.get("productId") or a.get("name"), a["state"]))
+
+    st, r = call("GET", f"/v1/apps/{app_id}/subscriptionGroups?limit=200")
+    if st == 200:
+        for g in r.get("data", []):
+            gid = g["id"]
+            gname = g["attributes"].get("referenceName") or gid
+            gst, gr = call("GET", f"/v1/subscriptionGroups/{gid}/subscriptions?limit=200")
+            if gst == 200:
+                for s in gr.get("data", []):
+                    a = s["attributes"]
+                    if a.get("state") in BLOCKING_ITEM:
+                        found.append(("Subscription", a.get("productId") or a.get("name"), a["state"]))
+            # The group itself carries a review state only via its submission
+            # item, so surface it whenever any of its subscriptions is blocked.
+            if any(k == "Subscription" for k, _, _ in found):
+                found.append(("Subscription Group", gname, "check in App Store Connect"))
+
+    return found
+
+
+def report_blockers(app_id):
+    found = blockers(app_id)
+    if not found:
+        return False
+    print("\nBlocked by these purchases - each needs 'Update Review' pressed on "
+          "its own page in App Store Connect:")
+    for kind, name, state in found:
+        print(f"  - {kind}: {name} [{state}]")
+    print("\nUntil every one is back to Ready for Review, 'Resubmit to App "
+          "Review' stays greyed out and the API reports only \"Version is not "
+          "ready to be submitted yet\". Retrying will not clear it.")
+    return True
 
 
 def main():
@@ -106,9 +168,14 @@ def main():
             print("already submitted - nothing to do")
             return
 
+    blocked = report_blockers(app_id)
+
     if not apply:
         print("\ndry run - re-run with --apply to submit for review")
         return
+    if blocked:
+        sys.exit("ERROR refusing to submit while purchases are blocked "
+                 "(clear them first, then re-run)")
 
     if not sub or item_count(sub) == 0:
         if not sub:
@@ -130,9 +197,11 @@ def main():
         print(f"attached version {ver_str} to the submission")
     sub_id = sub["id"]
 
-    # Right after a metadata edit Apple reprocesses the version and rejects the
-    # submit with "Version is not ready to be submitted yet". It clears on its
-    # own, so retry rather than making the human come back to it.
+    # "Version is not ready to be submitted yet" is worth retrying only briefly:
+    # right after a metadata edit Apple does reprocess the version. But the same
+    # message is also what a blocked purchase looks like through the API, and
+    # that never clears on its own - so re-check for blockers on every attempt
+    # and stop the moment one appears, rather than spinning for the full window.
     deadline = time.time() + (int(sys.argv[sys.argv.index("--wait") + 1])
                               if "--wait" in sys.argv else 0) * 60
     while True:
@@ -143,6 +212,8 @@ def main():
             print(f"SUBMITTED - state is now {r['data']['attributes']['state']}")
             return
         transient = "not ready to be submitted" in json.dumps(r)
+        if transient and report_blockers(app_id):
+            sys.exit("ERROR blocked by the purchases listed above - not retrying")
         if not transient or time.time() >= deadline:
             die("could not submit for review", r)
         print(f"not ready yet, retrying in 90s "
