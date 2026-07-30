@@ -39,7 +39,8 @@ targets:
         NSLocationWhenInUseUsageDescription: Tearoff checks your location only while the app is open, to tag a store when you save a purchase and to nudge you if you're back nearby with an open return window. Your location is never stored or sent anywhere.
         NSSupportsLiveActivities: true
         ITSAppUsesNonExemptEncryption: false
-        CFBundleVersion: "10"
+        CFBundleShortVersionString: "1.0.1"
+        CFBundleVersion: "11"
         UIBackgroundModes:
           - remote-notification
         UILaunchScreen: {}
@@ -83,7 +84,10 @@ targets:
       path: TearoffWidgets/Info.plist
       properties:
         CFBundleDisplayName: Tearoff
-        CFBundleVersion: "10"
+        # Must match the app target exactly, or the widget extension is
+        # rejected at upload as a version mismatch.
+        CFBundleShortVersionString: "1.0.1"
+        CFBundleVersion: "11"
         NSExtension:
           NSExtensionPointIdentifier: com.apple.widgetkit-extension
     settings:
