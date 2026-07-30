@@ -355,6 +355,9 @@ struct VaultView: View {
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.plain)
+            // Icon-only, so VoiceOver has nothing to read without this and the
+            // banner cannot be dismissed non-visually.
+            .accessibilityLabel("Dismiss scanning tip")
         }
         .padding(.vertical, 4)
         .listRowBackground(Color.accentColor.opacity(0.08))

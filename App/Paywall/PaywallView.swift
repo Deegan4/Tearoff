@@ -20,6 +20,8 @@ struct PaywallView: View {
     /// Drives the headline; zero falls back to generic copy.
     private let valueInWindowCents: Int
 
+    @State private var redeemingCode = false
+
     init(store: StoreManager, valueInWindowCents: Int) {
         self.store = store
         self.valueInWindowCents = valueInWindowCents
@@ -44,6 +46,13 @@ struct PaywallView: View {
                 }
             }
             .task { if store.products.isEmpty { await store.loadProducts() } }
+            // The redeemed transaction arrives through Transaction.updates,
+            // which StoreManager already listens on - but recompute on dismiss
+            // too, so the sheet closing is never the thing that strands a
+            // successful redemption behind a stale entitlement.
+            .offerCodeRedemption(isPresented: $redeemingCode) { _ in
+                Task { await store.refreshEntitlements() }
+            }
             .onChange(of: store.isPro) { _, isPro in
                 if isPro { dismiss() }   // purchase/restore succeeded elsewhere
             }
@@ -188,9 +197,16 @@ struct PaywallView: View {
 
     private var restoreAndTerms: some View {
         VStack(spacing: 8) {
-            Button("Restore Purchases") { Task { await store.restore() } }
-                .font(.footnote)
-                .disabled(store.isWorking)
+            HStack(spacing: 16) {
+                Button("Restore Purchases") { Task { await store.restore() } }
+                    .disabled(store.isWorking)
+                // Without this there is no in-app route for an offer code at
+                // all: redeeming in the App Store leaves the user back here
+                // with Pro still locked and no way to enter the code.
+                Button("Redeem Code") { redeemingCode = true }
+                    .disabled(store.isWorking)
+            }
+            .font(.footnote)
             // Guideline 3.1.2(a): the subscription purchase screen itself must
             // link to both documents, not just the app's Settings/metadata.
             HStack(spacing: 16) {
