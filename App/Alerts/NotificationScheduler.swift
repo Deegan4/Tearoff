@@ -11,6 +11,15 @@ actor NotificationScheduler {
         (try? await center.requestAuthorization(options: [.alert, .sound])) ?? false
     }
 
+    /// Current system permission. Deadline alerts are the product, so the UI
+    /// has to be able to say when they cannot fire - a silently denied prompt
+    /// leaves the app looking like it is working when nothing will ever
+    /// arrive. Re-read on foreground: permission can be revoked in Settings
+    /// long after the prompt was answered.
+    func authorizationStatus() async -> UNAuthorizationStatus {
+        await center.notificationSettings().authorizationStatus
+    }
+
     /// Identifiers are deterministic per purchase, so re-scheduling after a
     /// correction replaces the pending request instead of duplicating it.
     private func identifier(_ id: UUID, _ kind: String) -> String {

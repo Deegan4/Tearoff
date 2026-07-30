@@ -1,5 +1,6 @@
 import SwiftUI
 import SwiftData
+import UserNotifications
 import VaultCore
 
 /// Settings: the on-device scan-accuracy dashboard and vault export. The
@@ -14,6 +15,7 @@ struct SettingsView: View {
     // Observed so the dashboard reflects new scans live.
     private var telemetry = ExtractionTelemetryStore.shared
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
     @State private var confirmingReset = false
     @State private var confirmingDeleteAllData = false
     /// Flipped once on appear so the accuracy bars animate up from zero.
@@ -27,6 +29,12 @@ struct SettingsView: View {
     @AppStorage("rankLastSeenLevel") private var lastSeenLevel = 1
     @State private var levelUp: VaultRank?
     @State private var exportedFile: ExportedFile?
+    /// Set when a write fails, so a dead Export button becomes an explanation
+    /// instead of nothing happening.
+    @State private var exportError: String?
+    /// System notification permission, re-read whenever Settings appears or
+    /// the app returns to the foreground.
+    @State private var notificationStatus: UNAuthorizationStatus = .notDetermined
     @State private var showingPaywall = false
     /// Same key the app root reads, so the choice applies immediately.
     @AppStorage(AppearanceMode.storageKey) private var appearance: AppearanceMode = .system
@@ -105,6 +113,7 @@ struct SettingsView: View {
                 } footer: {
                     Text("Cosmetic only — ranks never change a deadline or unlock a feature. Every tracked purchase counts, scanned or typed; completed returns count most.")
                 }
+                alertsSection
                 appearanceSection
                 proximitySection
                 if !purchases.isEmpty { insightsSection }
@@ -157,6 +166,13 @@ struct SettingsView: View {
                 barsFilled = true
                 refreshRank()
             }
+            // Also on foreground: the user may have just flipped the switch in
+            // the Settings app and come straight back.
+            .task { await refreshNotificationStatus() }
+            .onChange(of: scenePhase) { _, phase in
+                guard phase == .active else { return }
+                Task { await refreshNotificationStatus() }
+            }
             .fullScreenCover(item: $levelUp) { rank in
                 LevelUpView(rank: rank)
             }
@@ -179,10 +195,70 @@ struct SettingsView: View {
             .sheet(item: $exportedFile) { file in
                 ShareSheet(items: [file.url])
             }
+            .alert("Export failed",
+                   isPresented: Binding(get: { exportError != nil },
+                                        set: { if !$0 { exportError = nil } })) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(exportError ?? "")
+            }
             .sheet(isPresented: $showingPaywall) {
                 PaywallView(store: store, valueInWindowCents: valueInOpenReturnWindowCents)
             }
         }
+    }
+
+    /// Present the written file, or explain why there is nothing to present.
+    private func export(_ url: URL?, what: String) {
+        if let url {
+            exportedFile = ExportedFile(url: url)
+        } else {
+            exportError = "\(what) couldn't be written. Check that your device has free storage and try again."
+        }
+    }
+
+    // MARK: Alerts
+
+    /// Deadline alerts are the whole product, so a denied permission is a
+    /// broken app, not a preference. Say so plainly and hand the user the one
+    /// control that can fix it - iOS only allows the prompt once, so the
+    /// Settings app is the only route back.
+    @ViewBuilder
+    private var alertsSection: some View {
+        Section {
+            switch notificationStatus {
+            case .denied:
+                Label("Alerts are turned off", systemImage: "bell.slash.fill")
+                    .foregroundStyle(.red)
+                Button("Open iOS Settings") {
+                    if let url = URL(string: UIApplication.openSettingsURLString) {
+                        UIApplication.shared.open(url)
+                    }
+                }
+            case .notDetermined:
+                Label("Alerts not enabled yet", systemImage: "bell.badge")
+                    .foregroundStyle(.orange)
+                Button("Turn on alerts") {
+                    Task {
+                        _ = await NotificationScheduler.shared.requestAuthorization()
+                        await refreshNotificationStatus()
+                    }
+                }
+            default:
+                Label("Alerts are on", systemImage: "bell.fill")
+                    .foregroundStyle(.green)
+            }
+        } header: {
+            Text("Deadline alerts")
+        } footer: {
+            Text(notificationStatus == .authorized || notificationStatus == .provisional
+                 ? "Tearoff warns you 3 days before a return window closes and 30 days before a warranty ends."
+                 : "Without notification permission Tearoff cannot warn you before a return window closes - deadlines will pass silently.")
+        }
+    }
+
+    private func refreshNotificationStatus() async {
+        notificationStatus = await NotificationScheduler.shared.authorizationStatus()
     }
 
     // MARK: Appearance
@@ -306,14 +382,17 @@ struct SettingsView: View {
     private var exportSection: some View {
         Section {
             if store.isPro {
+                // A nil URL means the write failed. Left unhandled the sheet
+                // simply never presents and the button reads as broken, so
+                // failure has to say something.
                 Button {
-                    exportedFile = VaultExporter.writeCSV(purchases).map(ExportedFile.init)
+                    export(VaultExporter.writeCSV(purchases), what: "CSV export")
                 } label: {
                     Label("Export vault (CSV)", systemImage: "square.and.arrow.up")
                 }
                 .disabled(purchases.isEmpty)
                 Button {
-                    exportedFile = VaultExporter.writePDFReport(purchases).map(ExportedFile.init)
+                    export(VaultExporter.writePDFReport(purchases), what: "Year in Review PDF")
                 } label: {
                     Label("Year in Review (PDF)", systemImage: "doc.richtext")
                 }
