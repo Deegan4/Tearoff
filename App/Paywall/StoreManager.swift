@@ -109,9 +109,12 @@ final class StoreManager {
         updates = Task { [weak self] in
             for await update in Transaction.updates {
                 guard let self else { return }
-                if (try? update.payloadValue) != nil {
-                    await self.refreshEntitlements()
-                }
+                guard let transaction = try? update.payloadValue else { continue }
+                // Finish it, or StoreKit keeps redelivering the same transaction
+                // on every launch and treats it as still in flight. A promo code
+                // redeemed in the App Store arrives here unfinished.
+                await transaction.finish()
+                await self.refreshEntitlements()
             }
         }
     }
