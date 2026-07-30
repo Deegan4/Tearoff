@@ -21,6 +21,7 @@ struct TearoffApp: App {
                     guard hasCompletedOnboarding else { return }
                     _ = await NotificationScheduler.shared.requestAuthorization()
                 }
+                .task { await BuildEnvironment.resolve() }
                 .task { await store.loadProducts() }
                 // A promo code or IAP redeemed in the App Store unlocks Pro
                 // while Tearoff is suspended in the background. Nothing
