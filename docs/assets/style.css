@@ -115,6 +115,14 @@ li { margin-bottom: 6px; }
   margin-bottom: 14px;
 }
 
+.badge.plain {
+  background: color-mix(in srgb, var(--ink-soft) 16%, transparent);
+  color: var(--ink-soft);
+}
+
+.card ul { margin: 0; }
+.card li { font-size: 14px; }
+
 .cta {
   display: inline-flex;
   align-items: center;
