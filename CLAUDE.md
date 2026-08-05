@@ -74,8 +74,8 @@ repo; do not repeat — stage specific paths, not `-A`, after a device build).
 
 - Commit messages: conventional (`feat(app):`, `test(core):`, `chore:`), with
   the `Co-Authored-By: Claude Opus 4.8` trailer.
-- Land work on a feature branch and open a PR to `main`; the human runs the
-  merge (the sandbox's classifier blocks `gh pr merge`).
+- Land work on a feature branch and open a PR to `main`, then merge it once the
+  human gives the go-ahead. `gh pr merge --squash --delete-branch` works.
 - Keep `swift test` green and the app building before committing.
 
 ## Specs & plans
